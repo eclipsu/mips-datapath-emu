@@ -1,0 +1,33 @@
+# CMake build output
+build/
+cmake-build-*/
+
+# Compiled objects and binaries
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# WebAssembly / Emscripten output (generated from the C++ core)
+*.wasm
+*.wasm.map
+
+# Node / TypeScript UI
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs and local config
+*.log
+.env
