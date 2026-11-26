@@ -4,6 +4,8 @@
 #   make probe     print what decode() returns for WORD=0x... (default 0x2237FFF1)
 #   make clean     delete the build directory
 
+SHELL := /bin/bash
+
 BUILD := build
 UNITS := regfile memory alu decode control cpu
 
@@ -14,9 +16,12 @@ all: test
 configure:
 	@cmake -S . -B $(BUILD) > /dev/null
 
+# Build quietly: print the full log only if the build fails, otherwise only warnings.
+# Then run the tests showing only failures and a summary (--gtest_brief=1).
 $(UNITS): configure
-	@cmake --build $(BUILD) --target test_$@
-	@./$(BUILD)/test_$@
+	@cmake --build $(BUILD) --target test_$@ > $(BUILD)/build.log 2>&1 || (cat $(BUILD)/build.log; exit 1)
+	@grep -A3 "warning:" $(BUILD)/build.log || true
+	@set -o pipefail; ./$(BUILD)/test_$@ --gtest_brief=1 2>&1 | grep -v "Running main()"
 
 # Print every field decode() returns, e.g. `make probe WORD=0x2237FFF1`
 WORD ?= 0x2237FFF1
