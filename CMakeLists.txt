@@ -47,3 +47,7 @@ if(MIPS_BUILD_TESTS)
     mips_unit_test(cpu     src/memory.cpp src/regfile.cpp src/alu.cpp
                            src/decode.cpp src/control.cpp src/cpu.cpp)
 endif()
+
+# Debug tool: print every field decode() returns for one word. `make probe WORD=0x...`
+add_executable(probe_decode EXCLUDE_FROM_ALL tools/probe_decode.cpp src/decode.cpp src/regfile.cpp)
+target_include_directories(probe_decode PRIVATE src)
