@@ -17,11 +17,11 @@ TEST(RegisterFile, WriteThenReadReturnsValue) {
 }
 
 TEST(RegisterFile, ConventionalNamesMatchMipsNumbering) {
-    EXPECT_STREQ(RegisterFile::name(0), "$zero");
-    EXPECT_STREQ(RegisterFile::name(8), "$t0");   // Lecture 19: $t0-$t7 = $8-$15
-    EXPECT_STREQ(RegisterFile::name(16), "$s0");  // $s0-$s7 = $16-$23
-    EXPECT_STREQ(RegisterFile::name(29), "$sp");
-    EXPECT_STREQ(RegisterFile::name(31), "$ra");
+    EXPECT_EQ(RegisterFile::name(0), "$zero");
+    EXPECT_EQ(RegisterFile::name(8), "$t0");
+    EXPECT_EQ(RegisterFile::name(16), "$s0");
+    EXPECT_EQ(RegisterFile::name(29), "$sp");
+    EXPECT_EQ(RegisterFile::name(31), "$ra");
 }
 
 TEST(RegisterFile, IndexOfAcceptsNamesAndNumbers) {
