@@ -38,7 +38,7 @@ struct Instruction {
 
 Instruction decode(std::uint32_t word);
 
-const char* mnemonic(Op op);
+std::string mnemonic(Op op);
 
 // Human-readable form, e.g. "addi $s7, $s1, -15" or "lw $t3, 16($zero)".
 std::string disassemble(const Instruction& inst);
