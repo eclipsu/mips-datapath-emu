@@ -51,3 +51,18 @@ TEST(Alu, ShiftRightArithmeticKeepsSignBit) {
 TEST(Alu, LuiPlacesImmediateInUpperHalf) {
     EXPECT_EQ(alu(AluOp::Lui, 0, 0x1234).value, 0x12340000u);
 }
+
+// slt must compare the real signed values, even when a - b overflows 32 bits.
+// Checking only the sign bit of (a - b) gets both of these wrong:
+//
+//   a = 0x80000000 (-2147483648), b = 1
+//     -2147483648 < 1 is TRUE  -> 1
+//     a - b = 0x7FFFFFFF (wrapped around, sign bit 0) would say 0
+//
+//   a = 0x7FFFFFFF (2147483647), b = 0xFFFFFFFF (-1)
+//     2147483647 < -1 is FALSE -> 0
+//     a - b = 0x80000000 (wrapped around, sign bit 1) would say 1
+TEST(Alu, SltIsCorrectWhenSubtractionOverflows) {
+    EXPECT_EQ(alu(AluOp::Slt, 0x80000000u, 1u).value, 1u) << "-2147483648 < 1";
+    EXPECT_EQ(alu(AluOp::Slt, 0x7FFFFFFFu, 0xFFFFFFFFu).value, 0u) << "2147483647 < -1 is false";
+}
