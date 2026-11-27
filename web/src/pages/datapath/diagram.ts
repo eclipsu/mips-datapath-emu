@@ -1,20 +1,21 @@
-// The single-cycle datapath figure (Lecture 19), drawn once as SVG and then updated in place.
-// Geometry lives here; which wires carry a signal is decided from the control signals that
-// mips::control_for() returns, and the values on the wires come from Cpu::step()'s StepTrace.
+// The datapath figure, kept minimal: a handful of big blocks joined by thick, named buses,
+// with the values written large inside the blocks and on the buses.
+// Which buses carry a signal comes from mips::control_for(); every value shown comes
+// from Cpu::step()'s StepTrace (or, before a step, only from decode and register reads).
 
 import type { Control, DecodedWord, Trace } from "../../shared/core";
 
-// ---------- What one drawing of the datapath shows ----------
+// ---------- What one drawing shows ----------
 
 export interface View {
   d: DecodedWord;
   c: Control;
   /** null before the instruction has run (preview of the word at the PC). */
   t: Trace | null;
-  /** Values that are only read, not computed: shown before the step too. */
   regName: (r: number) => string;
   /** Address of this instruction. */
   pc: number;
+  /** Register values read before the step (shown in the preview). */
   rsValue: number;
   rtValue: number;
 }
@@ -32,40 +33,32 @@ function usage(v: View) {
   const shift = SHIFTS.has(d.mnemonic);
   const lui = d.mnemonic === "lui";
   const aluUsed = known && !c.jump;
-  const usesRs = known && !(c.jump && !c.jump_reg) && !shift && !lui;
-  const usesRt = known && ((d.format === "R" && !c.jump_reg) || c.branch || c.mem_write);
-  const taken = v.t ? v.t.branch_taken : null;
   return {
     known,
     shift,
-    lui,
     aluUsed,
-    aluAIn: aluUsed && !lui,
-    usesRs,
-    usesRt,
-    rdDest: c.reg_write && c.reg_dst,
-    rtDest: c.reg_write && !c.reg_dst && !c.link,
-    link: c.link,
-    useImm: c.alu_src || c.branch,
-    aluA: aluUsed && !lui && !shift && usesRs,
-    aluB_rt: aluUsed && !c.alu_src && !shift,
-    memAddr: c.mem_read || c.mem_write,
+    readsRs: known && !(c.jump && !c.jump_reg) && !shift && !lui,
+    readsRt: known && ((d.format === "R" && !c.jump_reg) || c.branch || c.mem_write),
+    aluA: aluUsed && !lui,
+    aluBReg: aluUsed && !c.alu_src && !shift,
+    aluBImm: aluUsed && (c.alu_src || shift),
+    mem: c.mem_read || c.mem_write,
     wbAlu: c.reg_write && !c.mem_to_reg && !c.link,
     wbMem: c.mem_to_reg,
-    // Before the step we can't know if a branch is taken: show both ways as possible.
-    branchTaken: c.branch && taken !== false,
-    sequential: known && !c.jump && !(c.branch && taken === true),
-    jumpImm: c.jump && !c.jump_reg,
+    nextFromCtl: c.branch || (c.jump && !c.jump_reg),
   };
 }
 type Usage = ReturnType<typeof usage>;
 
-// ---------- Value formatting ----------
+// ---------- Formatting ----------
 
-/** Data values as signed decimal (what the lecture tables use). */
 const dec = (v: number) => String(v | 0);
-/** Addresses in short hex. */
 const addr = (v: number) => "0x" + (v >>> 0).toString(16).toUpperCase();
+const hex8 = (v: number) => "0x" + (v >>> 0).toString(16).toUpperCase().padStart(8, "0");
+
+function immValue(v: View): number {
+  return ZERO_EXT.has(v.d.mnemonic) ? v.d.imm_zext : v.d.imm_sext;
+}
 
 // ---------- SVG helpers ----------
 
@@ -84,837 +77,432 @@ function s<K extends keyof SVGElementTagNameMap>(
 type Pt = readonly [number, number];
 const pathOf = (pts: readonly Pt[]) => pts.map(([x, y], i) => `${i ? "L" : "M"} ${x} ${y}`).join(" ");
 
-/** Arrowhead at `tip`, pointing along the segment from `from`. The line stops at its base. */
-const HEAD = 9;
-function arrowHead(from: Pt, tip: Pt): { base: Pt; d: string } {
+const HEAD = 12;
+/** Arrowhead at the last point; the line stops at its base so the tip stays sharp. */
+function withHead(pts: readonly Pt[]): { line: string; head: string } {
+  const tip = pts[pts.length - 1]!;
+  const from = pts[pts.length - 2]!;
   const dx = Math.sign(tip[0] - from[0]);
   const dy = Math.sign(tip[1] - from[1]);
   const base: Pt = [tip[0] - dx * HEAD, tip[1] - dy * HEAD];
-  const w = 4.5;
+  const w = 6.5;
   const a: Pt = [base[0] + dy * w, base[1] - dx * w];
   const b: Pt = [base[0] - dy * w, base[1] + dx * w];
-  return { base, d: `M ${a[0]} ${a[1]} L ${tip[0]} ${tip[1]} L ${b[0]} ${b[1]} Z` };
-}
-
-// ---------- Wires ----------
-
-type Field = "opcode" | "rs" | "rt" | "rd" | "imm" | "funct" | "target";
-
-interface WireDef {
-  id: string;
-  title: string;
-  pts: readonly Pt[];
-  phase: Phase;
-  on: (u: Usage, v: View) => boolean;
-  field?: Field;
-  /** Junction dots, drawn where this wire leaves another. */
-  dots?: readonly Pt[];
-  arrow?: boolean;
-  /** Bit range printed next to the wire, e.g. "[25-21]". */
-  bits?: { at: Pt; text: string };
-  /** A value tag sitting on the wire. */
-  tag?: { at: Pt; value: (v: View) => string | null };
-}
-
-// Spine: the instruction bus leaving instruction memory, split into fields.
-const SPINE_X = 330;
-
-const WIRES: WireDef[] = [
-  // ---- Fetch ----
-  {
-    id: "pc-im",
-    title: "PC → instruction memory read address",
-    pts: [[110, 455], [150, 455]],
-    phase: 0,
-    on: () => true,
-  },
-  {
-    id: "pc-add",
-    title: "PC → PC + 4 adder",
-    pts: [[128, 455], [128, 95], [180, 95]],
-    dots: [[128, 455]],
-    phase: 0,
-    on: () => true,
-  },
-  {
-    id: "pc4",
-    title: "PC + 4",
-    pts: [[236, 125], [980, 125], [980, 165], [1010, 165]],
-    phase: 0,
-    on: (u) => u.sequential || u.link || u.jumpImm || u.branchTaken,
-    tag: { at: [272, 125], value: (v) => addr(v.pc + 4) },
-  },
-  {
-    id: "pc4-branch",
-    title: "PC + 4 → branch adder",
-    pts: [[860, 125], [860, 195], [880, 195]],
-    dots: [[860, 125]],
-    phase: 2,
-    on: (_u, v) => v.c.branch,
-  },
-  {
-    id: "pc4-hi",
-    title: "PC + 4 [31-28] → jump address",
-    pts: [[580, 125], [580, 62]],
-    dots: [[580, 125]],
-    phase: 1,
-    on: (u) => u.jumpImm,
-    bits: { at: [586, 96], text: "[31-28]" },
-  },
-  {
-    id: "im-out",
-    title: "Instruction [31-0]",
-    pts: [[300, 455], [SPINE_X, 455]],
-    arrow: false,
-    phase: 0,
-    on: (u) => u.known,
-  },
-  {
-    id: "spine",
-    title: "Instruction bus",
-    pts: [[SPINE_X, 44], [SPINE_X, 740]],
-    arrow: false,
-    dots: [[SPINE_X, 455]],
-    phase: 0,
-    on: (u) => u.known,
-  },
-
-  // ---- Decode: field taps ----
-  {
-    id: "f-opcode",
-    title: "Instruction [31-26] → Control",
-    pts: [[SPINE_X, 185], [390, 185]],
-    dots: [[SPINE_X, 185]],
-    field: "opcode",
-    phase: 1,
-    on: (u) => u.known,
-    bits: { at: [336, 175], text: "[31-26]" },
-  },
-  {
-    id: "f-rs",
-    title: "Instruction [25-21] → Read register 1",
-    pts: [[SPINE_X, 400], [560, 400]],
-    dots: [[SPINE_X, 400]],
-    field: "rs",
-    phase: 1,
-    on: (u) => u.usesRs,
-    bits: { at: [336, 390], text: "[25-21]" },
-    tag: { at: [522, 400], value: (v) => v.regName(v.d.rs) },
-  },
-  {
-    id: "f-rt-in",
-    title: "Instruction [20-16]",
-    pts: [[SPINE_X, 440], [450, 440]],
-    arrow: false,
-    dots: [[SPINE_X, 440]],
-    field: "rt",
-    phase: 1,
-    on: (u) => u.usesRt || u.rtDest,
-    bits: { at: [336, 430], text: "[20-16]" },
-  },
-  {
-    id: "f-rt",
-    title: "Instruction [20-16] → Read register 2",
-    pts: [[450, 440], [560, 440]],
-    field: "rt",
-    phase: 1,
-    on: (u) => u.usesRt,
-    tag: { at: [522, 440], value: (v) => v.regName(v.d.rt) },
-  },
-  {
-    id: "f-rt-dst",
-    title: "Instruction [20-16] → RegDst mux (destination rt)",
-    pts: [[450, 440], [450, 485], [480, 485]],
-    dots: [[450, 440]],
-    field: "rt",
-    phase: 1,
-    on: (u) => u.rtDest,
-  },
-  {
-    id: "f-rd",
-    title: "Instruction [15-11] → RegDst mux (destination rd)",
-    pts: [[SPINE_X, 507], [480, 507]],
-    dots: [[SPINE_X, 507]],
-    field: "rd",
-    phase: 1,
-    on: (u) => u.rdDest,
-    bits: { at: [336, 497], text: "[15-11]" },
-    tag: { at: [416, 507], value: (v) => v.regName(v.d.rd) },
-  },
-  {
-    id: "f-imm",
-    title: "Instruction [15-0] → Sign-extend",
-    pts: [[SPINE_X, 650], [605, 650]],
-    dots: [[SPINE_X, 650]],
-    field: "imm",
-    phase: 1,
-    on: (u) => u.useImm,
-    bits: { at: [336, 640], text: "[15-0]" },
-  },
-  {
-    id: "f-funct",
-    title: "Instruction [5-0] → ALU control",
-    pts: [[SPINE_X, 740], [915, 740], [915, 716]],
-    field: "funct",
-    phase: 1,
-    on: (u, v) => u.aluUsed && v.d.format === "R",
-    bits: { at: [336, 730], text: "[5-0]" },
-  },
-  {
-    id: "f-target",
-    title: "Instruction [25-0] → Shift left 2",
-    pts: [[SPINE_X, 44], [390, 44]],
-    field: "target",
-    phase: 1,
-    on: (u) => u.jumpImm,
-    bits: { at: [336, 34], text: "[25-0]" },
-  },
-  {
-    id: "jaddr-concat",
-    title: "Target × 4 → jump address",
-    pts: [[470, 44], [520, 44]],
-    phase: 1,
-    on: (u) => u.jumpImm,
-  },
-  {
-    id: "jaddr",
-    title: "Jump address [31-0]",
-    pts: [[640, 44], [1080, 44], [1080, 120], [1110, 120]],
-    phase: 1,
-    on: (u) => u.jumpImm,
-    tag: { at: [760, 44], value: (v) => addr(((v.pc + 4) & 0xf0000000) | (v.d.target << 2)) },
-  },
-  {
-    id: "regdst-out",
-    title: "Write register",
-    pts: [[506, 507], [560, 507]],
-    phase: 1,
-    on: (_u, v) => v.c.reg_write,
-  },
-
-  // ---- Decode: register file outputs ----
-  {
-    id: "rd1",
-    title: "Read data 1 (rs) → ALU input A",
-    pts: [[730, 405], [790, 405]],
-    phase: 1,
-    on: (u) => u.aluA,
-    tag: { at: [758, 405], value: (v) => dec(v.t ? v.t.rs_value : v.rsValue) },
-  },
-  {
-    id: "rd2",
-    title: "Read data 2 (rt)",
-    pts: [[730, 505], [790, 505]],
-    phase: 1,
-    on: (u) => u.aluB_rt,
-    tag: { at: [767, 505], value: (v) => dec(v.t ? v.t.rt_value : v.rtValue) },
-  },
-  {
-    id: "rd2-mem",
-    title: "Read data 2 → data memory write data",
-    pts: [[745, 505], [745, 600], [1015, 600], [1015, 570], [1040, 570]],
-    dots: [[745, 505]],
-    phase: 3,
-    on: (_u, v) => v.c.mem_write,
-    tag: { at: [900, 600], value: (v) => dec(v.t ? v.t.rt_value : v.rtValue) },
-  },
-  {
-    id: "sext-out",
-    title: "Extended immediate",
-    pts: [[685, 650], [775, 650]],
-    arrow: false,
-    phase: 1,
-    on: (u) => u.useImm,
-    tag: {
-      at: [728, 650],
-      value: (v) => (v.d.format === "I" ? dec(ZERO_EXT.has(v.d.mnemonic) ? v.d.imm_zext : v.d.imm_sext) : null),
-    },
-  },
-  {
-    id: "sext-branch",
-    title: "Extended immediate → Shift left 2 (branch offset)",
-    pts: [[775, 650], [840, 650], [840, 320]],
-    dots: [[775, 650]],
-    phase: 1,
-    on: (_u, v) => v.c.branch,
-  },
-  {
-    id: "sext-alu",
-    title: "Extended immediate → ALUSrc mux",
-    pts: [[775, 650], [775, 550], [790, 550]],
-    phase: 1,
-    on: (_u, v) => v.c.alu_src,
-  },
-
-  // ---- Execute ----
-  {
-    id: "amux-out",
-    title: "ALU input A",
-    pts: [[816, 420], [870, 420]],
-    phase: 2,
-    on: (u) => u.aluAIn,
-    tag: { at: [843, 420], value: (v) => (v.t ? dec(v.t.alu_a) : null) },
-  },
-  {
-    id: "bmux-out",
-    title: "ALU input B",
-    pts: [[816, 525], [870, 525]],
-    phase: 2,
-    on: (u) => u.aluUsed,
-    tag: { at: [843, 525], value: (v) => (v.t ? dec(v.t.alu_b) : null) },
-  },
-  {
-    id: "aluctl-out",
-    title: "ALU operation",
-    pts: [[915, 664], [915, 570]],
-    phase: 2,
-    on: (u) => u.aluUsed,
-  },
-  {
-    id: "sl2-out",
-    title: "Offset × 4 → branch adder",
-    pts: [[840, 290], [840, 255], [880, 255]],
-    phase: 2,
-    on: (_u, v) => v.c.branch,
-  },
-  {
-    id: "zero",
-    title: "ALU Zero",
-    pts: [[960, 445], [1013, 445], [1013, 330]],
-    phase: 2,
-    on: (_u, v) => v.c.branch,
-    tag: { at: [988, 445], value: (v) => (v.t ? (v.t.alu_zero ? "1" : "0") : null) },
-  },
-  {
-    id: "badd-out",
-    title: "Branch target",
-    pts: [[936, 225], [970, 225], [970, 205], [1010, 205]],
-    phase: 2,
-    on: (u) => u.branchTaken,
-  },
-
-  // ---- Memory ----
-  {
-    id: "alu-res",
-    title: "ALU result",
-    pts: [[960, 500], [990, 500]],
-    arrow: false,
-    phase: 2,
-    on: (u) => u.memAddr || u.wbAlu,
-  },
-  {
-    id: "alu-addr",
-    title: "ALU result → data memory address",
-    pts: [[990, 500], [1040, 500]],
-    phase: 3,
-    on: (u) => u.memAddr,
-    tag: { at: [1013, 500], value: (v) => (v.t ? addr(v.t.alu_result) : null) },
-  },
-  {
-    id: "alu-wb",
-    title: "ALU result → MemtoReg mux",
-    pts: [[990, 500], [990, 630], [1250, 630], [1250, 545], [1270, 545]],
-    dots: [[990, 500]],
-    phase: 3,
-    on: (u) => u.wbAlu,
-    tag: { at: [1120, 630], value: (v) => (v.t ? dec(v.t.alu_result) : null) },
-  },
-  {
-    id: "mem-out",
-    title: "Data memory read data",
-    pts: [[1210, 490], [1270, 490]],
-    phase: 3,
-    on: (u) => u.wbMem,
-    tag: { at: [1240, 490], value: (v) => (v.t && v.c.mem_read ? dec(v.t.mem_data) : null) },
-  },
-  {
-    id: "gate-out",
-    title: "PCSrc: branch taken",
-    pts: [[1023, 290], [1023, 213]],
-    phase: 3,
-    on: (_u, v) => v.c.branch,
-    tag: { at: [1023, 252], value: (v) => (v.t ? (v.t.branch_taken ? "1" : "0") : null) },
-  },
-
-  // ---- Write back / next PC ----
-  {
-    id: "wb",
-    title: "Write data",
-    pts: [[1296, 515], [1330, 515], [1330, 790], [540, 790], [540, 550], [560, 550]],
-    phase: 4,
-    on: (_u, v) => v.c.reg_write,
-    tag: { at: [900, 790], value: (v) => (v.t && v.t.reg_written ? dec(v.t.reg_value) : null) },
-  },
-  {
-    id: "pcsrc-out",
-    title: "PC + 4 or branch target",
-    pts: [[1036, 185], [1110, 185]],
-    phase: 4,
-    on: (_u, v) => !v.c.jump,
-  },
-  {
-    id: "next-pc",
-    title: "Next PC",
-    pts: [[1136, 152], [1430, 152], [1430, 14], [30, 14], [30, 455], [46, 455]],
-    phase: 4,
-    on: () => true,
-    tag: { at: [700, 14], value: (v) => (v.t ? addr(v.t.next_pc) : null) },
-  },
-];
-
-// Named nets: short stubs labelled with where the signal comes from, instead of long wires.
-interface FlagDef {
-  id: string;
-  title: string;
-  text: string;
-  /** Point the stub delivers to (a mux input), entering from the left. */
-  to: Pt;
-  len: number;
-  phase: Phase;
-  on: (u: Usage, v: View) => boolean;
-}
-
-const FLAGS: FlagDef[] = [
-  { id: "k4", title: "Constant 4", text: "4", to: [180, 155], len: 26, phase: 0, on: () => true },
-  { id: "k31", title: "Register 31 ($ra), for jal", text: "31", to: [480, 529], len: 22, phase: 1, on: (u) => u.link },
-  { id: "rt-a", title: "Read data 2 (rt), for shifts", text: "rt", to: [790, 435], len: 26, phase: 2, on: (u) => u.shift },
-  { id: "shamt", title: "Instruction [10-6] shamt, for shifts", text: "shamt", to: [790, 530], len: 12, phase: 2, on: (u) => u.shift },
-  { id: "pc4-link", title: "PC + 4, saved by jal", text: "PC+4", to: [1270, 515], len: 14, phase: 3, on: (u) => u.link },
-  { id: "rs-jr", title: "Read data 1 (rs), for jr", text: "rs", to: [1110, 150], len: 30, phase: 1, on: (_u, v) => v.c.jump_reg },
-];
-
-// ---------- Units ----------
-
-interface Mux {
-  id: string;
-  x: number;
-  y: number;
-  h: number;
-  inputs: { y: number; label: string }[];
-  /** Index into inputs that is selected, or null when the mux is idle. */
-  pick: (u: Usage, v: View) => number | null;
-}
-
-const MUXES: Mux[] = [
-  {
-    id: "m-regdst",
-    x: 480,
-    y: 470,
-    h: 74,
-    inputs: [
-      { y: 485, label: "0" },
-      { y: 507, label: "1" },
-      { y: 529, label: "jal" },
-    ],
-    pick: (u, v) => (!v.c.reg_write ? null : u.link ? 2 : v.c.reg_dst ? 1 : 0),
-  },
-  {
-    id: "m-alua",
-    x: 790,
-    y: 390,
-    h: 60,
-    inputs: [
-      { y: 405, label: "0" },
-      { y: 435, label: "1" },
-    ],
-    pick: (u) => (!u.aluAIn ? null : u.shift ? 1 : 0),
-  },
-  {
-    id: "m-alusrc",
-    x: 790,
-    y: 490,
-    h: 72,
-    inputs: [
-      { y: 505, label: "0" },
-      { y: 530, label: "sh" },
-      { y: 550, label: "1" },
-    ],
-    pick: (u, v) => (!u.aluUsed ? null : u.shift ? 1 : v.c.alu_src ? 2 : 0),
-  },
-  {
-    id: "m-memtoreg",
-    x: 1270,
-    y: 470,
-    h: 90,
-    inputs: [
-      { y: 490, label: "1" },
-      { y: 515, label: "jal" },
-      { y: 545, label: "0" },
-    ],
-    pick: (u, v) => (!v.c.reg_write ? null : u.link ? 1 : v.c.mem_to_reg ? 0 : 2),
-  },
-  {
-    id: "m-pcsrc",
-    x: 1010,
-    y: 150,
-    h: 70,
-    inputs: [
-      { y: 165, label: "0" },
-      { y: 205, label: "1" },
-    ],
-    pick: (_u, v) => (v.c.jump ? null : v.t && v.c.branch && v.t.branch_taken ? 1 : 0),
-  },
-  {
-    id: "m-jump",
-    x: 1110,
-    y: 100,
-    h: 105,
-    inputs: [
-      { y: 120, label: "1" },
-      { y: 150, label: "jr" },
-      { y: 185, label: "0" },
-    ],
-    pick: (_u, v) => (v.c.jump_reg ? 1 : v.c.jump ? 0 : 2),
-  },
-];
-
-/** Control lines: a short stub into a unit with the signal name and its value. */
-interface Stub {
-  id: string;
-  name: string;
-  /** Point on the unit edge; the stub rises `len` px above it (negative: below). */
-  at: Pt;
-  len: number;
-  value: (v: View) => string;
-  anchor?: "start" | "end";
-}
-
-const bit = (b: boolean) => (b ? "1" : "0");
-
-const STUBS: Stub[] = [
-  { id: "s-regdst", name: "RegDst", at: [493, 544], len: -16, value: (v) => bit(v.c.reg_dst) },
-  { id: "s-regwrite", name: "RegWrite", at: [645, 370], len: 16, value: (v) => bit(v.c.reg_write) },
-  { id: "s-shift", name: "Shift", at: [803, 390], len: 14, value: (v) => bit(SHIFTS.has(v.d.mnemonic)) },
-  { id: "s-alusrc", name: "ALUSrc", at: [803, 490], len: 14, value: (v) => bit(v.c.alu_src) },
-  { id: "s-memwrite", name: "MemWrite", at: [1090, 400], len: 16, value: (v) => bit(v.c.mem_write) },
-  { id: "s-memread", name: "MemRead", at: [1165, 400], len: 16, value: (v) => bit(v.c.mem_read) },
-  { id: "s-memtoreg", name: "MemtoReg", at: [1283, 470], len: 16, value: (v) => bit(v.c.mem_to_reg) },
-  { id: "s-branch", name: "Branch", at: [1033, 330], len: -18, value: (v) => bit(v.c.branch), anchor: "start" },
-  { id: "s-jump", name: "Jump", at: [1123, 100], len: 14, value: (v) => bit(v.c.jump) },
-];
-
-const CONTROL_ROWS: { name: string; value: (c: Control) => string }[] = [
-  { name: "RegDst", value: (c) => bit(c.reg_dst) },
-  { name: "ALUSrc", value: (c) => bit(c.alu_src) },
-  { name: "MemtoReg", value: (c) => bit(c.mem_to_reg) },
-  { name: "RegWrite", value: (c) => bit(c.reg_write) },
-  { name: "MemRead", value: (c) => bit(c.mem_read) },
-  { name: "MemWrite", value: (c) => bit(c.mem_write) },
-  { name: "Branch", value: (c) => bit(c.branch) },
-  { name: "Jump", value: (c) => bit(c.jump) },
-  { name: "JumpReg", value: (c) => bit(c.jump_reg) },
-  { name: "Link", value: (c) => bit(c.link) },
-  { name: "ALUOp", value: (c) => c.alu_op },
-];
-
-// ---------- Drawing ----------
-
-export const VIEW_W = 1460;
-export const VIEW_H = 820;
-
-function box(x: number, y: number, w: number, h: number, cls: string, title: string): SVGRectElement {
-  return s("rect", { x, y, width: w, height: h, class: `block ${cls}` }, s("title", {}, title));
+  return {
+    line: pathOf([...pts.slice(0, -1), base]),
+    head: `M ${a[0]} ${a[1]} L ${tip[0]} ${tip[1]} L ${b[0]} ${b[1]} Z`,
+  };
 }
 
 function text(x: number, y: number, str: string, cls: string, anchor = "middle"): SVGTextElement {
   return s("text", { x, y, class: cls, "text-anchor": anchor }, str);
 }
 
-/** ALU / adder outline: the notched trapezoid from the lecture figures. */
-function aluShape(x: number, y: number, w: number, h: number, cls: string, title: string): SVGPathElement {
-  const notch = h * 0.18;
-  const mid = y + h / 2;
-  const d = [
-    `M ${x} ${y}`,
-    `L ${x + w} ${y + h * 0.25}`,
-    `L ${x + w} ${y + h * 0.75}`,
-    `L ${x} ${y + h}`,
-    `L ${x} ${mid + notch}`,
-    `L ${x + w * 0.28} ${mid}`,
-    `L ${x} ${mid - notch}`,
-    "Z",
-  ].join(" ");
-  return s("path", { d, class: `block ${cls}` }, s("title", {}, title));
+// ---------- Buses ----------
+
+interface Bus {
+  id: string;
+  name: string;
+  pts: readonly Pt[];
+  phase: Phase;
+  on: (u: Usage, v: View) => boolean;
+  arrow?: boolean;
+  dots?: readonly Pt[];
+  /** Bus name printed beside it. */
+  label?: { at: Pt; anchor?: "start" | "middle" | "end" };
+  /** Value tag on the bus. */
+  tag?: { at: Pt; value: (v: View, u: Usage) => string | null };
 }
 
-function muxShape(m: Mux): SVGGElement {
-  const w = 26;
-  const r = w / 2;
-  const g = s("g", { class: "mux", id: m.id });
-  g.append(
-    s("path", {
-      d: `M ${m.x} ${m.y + r} A ${r} ${r} 0 0 1 ${m.x + w} ${m.y + r} L ${m.x + w} ${m.y + m.h - r} A ${r} ${r} 0 0 1 ${m.x} ${m.y + m.h - r} Z`,
-      class: "block mux-body",
-    }),
-  );
-  m.inputs.forEach((inp, i) => {
-    g.append(text(m.x + 6, inp.y, inp.label, `mux-in mux-in-${i}`, "start"));
-  });
-  // Selector line drawn inside the mux, from the chosen input to the output.
-  g.append(s("path", { d: "", class: "mux-sel" }));
-  return g;
+const BUSES: Bus[] = [
+  // Fetch
+  {
+    id: "pc-im",
+    name: "PC → instruction memory",
+    pts: [[125, 460], [125, 372]],
+    phase: 0,
+    on: () => true,
+  },
+  {
+    id: "im-ctl",
+    name: "Instruction",
+    pts: [[212, 230], [290, 230]],
+    phase: 0,
+    on: (u) => u.known,
+  },
+  {
+    id: "im-regs",
+    name: "Register numbers",
+    pts: [[240, 230], [240, 400], [290, 400]],
+    dots: [[240, 230]],
+    phase: 0,
+    on: (u) => u.readsRs || u.readsRt || u.known,
+  },
+
+  // Decode
+  {
+    id: "rs",
+    name: "Register value A",
+    pts: [[570, 370], [680, 370]],
+    phase: 1,
+    on: (u) => u.aluA,
+  },
+  {
+    id: "rt",
+    name: "Register value B (rt)",
+    pts: [[570, 440], [605, 440], [605, 460], [640, 460]],
+    phase: 1,
+    on: (u) => u.aluBReg,
+  },
+  {
+    id: "imm",
+    name: "Immediate",
+    pts: [[570, 240], [625, 240], [625, 490], [640, 490]],
+    phase: 1,
+    on: (u) => u.aluBImm,
+    label: { at: [633, 228], anchor: "start" },
+    tag: { at: [625, 318], value: (v) => (SHIFTS.has(v.d.mnemonic) ? String(v.d.shamt) : dec(immValue(v))) },
+  },
+  {
+    id: "ctl-next",
+    name: "Offset / target",
+    pts: [[570, 150], [680, 150]],
+    phase: 1,
+    on: (u) => u.nextFromCtl,
+    label: { at: [625, 136] },
+  },
+
+  // Execute
+  {
+    id: "mux-alu",
+    name: "ALU input B",
+    pts: [[658, 475], [680, 475]],
+    phase: 2,
+    on: (u) => u.aluUsed,
+  },
+  {
+    id: "alu-out",
+    name: "ALU result",
+    pts: [[830, 420], [1010, 420]],
+    phase: 2,
+    on: (u) => u.mem || u.wbAlu,
+    label: { at: [896, 442] },
+    tag: { at: [884, 420], value: (v, u) => (v.t ? (u.mem ? addr(v.t.alu_result) : dec(v.t.alu_result)) : null) },
+  },
+  {
+    id: "zero",
+    name: "Zero",
+    pts: [[755, 335], [755, 212]],
+    phase: 2,
+    on: (_u, v) => v.c.branch,
+    label: { at: [767, 290], anchor: "start" },
+    tag: { at: [755, 250], value: (v) => (v.t ? (v.t.alu_zero ? "1" : "0") : null) },
+  },
+
+  // Memory
+  {
+    id: "wdata",
+    name: "Write data",
+    pts: [[590, 440], [590, 560], [985, 560], [985, 470], [1010, 470]],
+    dots: [[590, 440]],
+    phase: 3,
+    on: (_u, v) => v.c.mem_write,
+    label: { at: [780, 546] },
+    tag: { at: [880, 560], value: (v) => dec(v.t ? v.t.rt_value : v.rtValue) },
+  },
+
+  // Write back
+  {
+    id: "mem-wb",
+    name: "Read data",
+    pts: [[1090, 502], [1090, 600], [950, 600]],
+    arrow: false,
+    phase: 4,
+    on: (u) => u.wbMem,
+  },
+  {
+    id: "alu-wb",
+    name: "ALU result → write back",
+    pts: [[950, 420], [950, 600]],
+    arrow: false,
+    dots: [[950, 420]],
+    phase: 4,
+    on: (u) => u.wbAlu,
+  },
+  {
+    id: "wb",
+    name: "Write back",
+    pts: [[950, 600], [430, 600], [430, 532]],
+    dots: [[950, 600]],
+    phase: 4,
+    on: (_u, v) => v.c.reg_write,
+    label: { at: [560, 586] },
+    tag: { at: [700, 600], value: (v) => (v.t && v.t.reg_written ? dec(v.t.reg_value) : null) },
+  },
+  {
+    id: "next-pc",
+    name: "Next PC",
+    pts: [[912, 155], [940, 155], [940, 36], [24, 36], [24, 505], [50, 505]],
+    phase: 4,
+    on: () => true,
+    label: { at: [300, 22] },
+    tag: { at: [480, 36], value: (v) => (v.t ? addr(v.t.next_pc) : null) },
+  },
+];
+
+const SIGNALS: [keyof Control, string][] = [
+  ["reg_write", "RegWrite"],
+  ["reg_dst", "RegDst"],
+  ["alu_src", "ALUSrc"],
+  ["mem_read", "MemRead"],
+  ["mem_write", "MemWrite"],
+  ["mem_to_reg", "MemtoReg"],
+  ["branch", "Branch"],
+  ["jump", "Jump"],
+  ["jump_reg", "JumpReg"],
+  ["link", "Link"],
+];
+
+// ---------- Drawing ----------
+
+export const VIEW_W = 1200;
+export const VIEW_H = 630;
+
+export interface Diagram {
+  svg: SVGSVGElement;
+  /** Redraw for an instruction, lighting buses of phases ≤ upTo. */
+  update(v: View, upTo: Phase): void;
 }
 
-function wireNode(w: WireDef): SVGGElement {
-  const g = s("g", { class: `wire${w.field ? ` f-${w.field}` : ""}`, "data-id": w.id, "data-phase": w.phase });
-  g.append(s("title", {}, w.title));
-  if (w.arrow ?? true) {
-    const tip = w.pts[w.pts.length - 1]!;
-    const head = arrowHead(w.pts[w.pts.length - 2]!, tip);
-    g.append(s("path", { d: pathOf([...w.pts.slice(0, -1), head.base]), class: "w-line", pathLength: 1 }), s("path", { d: head.d, class: "w-head" }));
+function busNode(b: Bus): SVGGElement {
+  const g = s("g", { class: "bus", "data-id": b.id, "data-phase": b.phase });
+  g.append(s("title", {}, b.name));
+  if (b.arrow ?? true) {
+    const h = withHead(b.pts);
+    g.append(s("path", { d: h.line, class: "b-line", pathLength: 1 }), s("path", { d: h.head, class: "b-head" }));
   } else {
-    g.append(s("path", { d: pathOf(w.pts), class: "w-line", pathLength: 1 }));
+    g.append(s("path", { d: pathOf(b.pts), class: "b-line", pathLength: 1 }));
   }
-  for (const [x, y] of w.dots ?? []) g.append(s("circle", { cx: x, cy: y, r: 3.6, class: "w-dot" }));
-  if (w.bits) g.append(text(w.bits.at[0], w.bits.at[1], w.bits.text, "w-bits", "start"));
-  if (w.tag) {
-    const t = s("g", { class: "tag", transform: `translate(${w.tag.at[0]} ${w.tag.at[1]})` });
-    t.append(s("rect", { x: -20, y: -9, width: 40, height: 18, class: "tag-box" }), text(0, 0.5, "", "tag-text"));
+  for (const [x, y] of b.dots ?? []) g.append(s("circle", { cx: x, cy: y, r: 5, class: "b-dot" }));
+  if (b.label) g.append(text(b.label.at[0], b.label.at[1], b.name, "b-label", b.label.anchor ?? "middle"));
+  if (b.tag) {
+    const t = s("g", { class: "tag", transform: `translate(${b.tag.at[0]} ${b.tag.at[1]})` });
+    t.append(s("rect", { x: -20, y: -12, width: 40, height: 24, rx: 3, class: "tag-box" }), text(0, 1, "", "tag-text"));
     g.append(t);
   }
   return g;
 }
 
-function flagNode(f: FlagDef): SVGGElement {
-  const [x, y] = f.to;
-  const g = s("g", { class: "wire flag", "data-id": f.id, "data-phase": f.phase });
-  g.append(
-    s("title", {}, f.title),
-    s("path", { d: `M ${x - f.len} ${y} L ${x - HEAD} ${y}`, class: "w-line", pathLength: 1 }),
-    s("path", { d: arrowHead([x - f.len, y], [x, y]).d, class: "w-head" }),
-    text(x - f.len - 4, y, f.text, "flag-text", "end"),
-  );
-  return g;
-}
-
-function stubNode(st: Stub): SVGGElement {
-  const [x, y] = st.at;
-  const top = y - st.len;
-  const g = s("g", { class: "stub", "data-id": st.id });
-  const anchor = st.anchor ?? "middle";
-  const labelY = st.len > 0 ? top - 9 : top + 9;
-  const labelX = anchor === "start" ? x + 4 : x;
-  g.append(
-    s("line", { x1: x, y1: y, x2: x, y2: top, class: "stub-line" }),
-    s("text", { x: labelX, y: labelY, class: "stub-text", "text-anchor": anchor }, s("tspan", { class: "stub-name" }, st.name + " "), s("tspan", { class: "stub-val" }, "")),
-  );
-  return g;
-}
-
-export interface Diagram {
-  svg: SVGSVGElement;
-  /** Redraw for a new instruction. `upTo` limits lit wires to phases ≤ upTo. */
-  update(v: View, upTo: Phase): void;
-}
-
 export function createDiagram(): Diagram {
   const svg = s("svg", { viewBox: `0 0 ${VIEW_W} ${VIEW_H}`, class: "datapath", role: "group" });
 
-  // Wires go under the units so units hide wire ends.
-  const wires = s("g", { class: "wires" });
-  for (const w of WIRES) wires.append(wireNode(w));
-  for (const f of FLAGS) wires.append(flagNode(f));
-  svg.append(wires);
+  // CPU outline
+  svg.append(
+    s("rect", { x: 250, y: 66, width: 722, height: 512, class: "cpu-frame" }),
+    text(268, 90, "CPU", "cpu-label", "start"),
+  );
+
+  const buses = s("g", { class: "buses" });
+  for (const b of BUSES) buses.append(busNode(b));
+  svg.append(buses);
 
   const units = s("g", { class: "units" });
+  const unit = (id: string, ...kids: SVGElement[]) => {
+    const g = s("g", { class: "unit", id }, ...kids);
+    units.append(g);
+    return g;
+  };
 
   // PC
-  units.append(
-    box(46, 400, 64, 110, "register", "Program counter"),
-    text(78, 448, "PC", "unit-title"),
-    text(78, 472, "", "unit-value", "middle"),
+  unit(
+    "u-pc",
+    s("rect", { x: 50, y: 460, width: 150, height: 90, class: "box k-reg" }),
+    text(125, 484, "PC", "u-title"),
+    s("text", { x: 125, y: 522, class: "u-big", "text-anchor": "middle", "data-v": "pc" }),
   );
-  units.lastElementChild!.setAttribute("id", "pc-value");
-
-  // PC + 4 adder
-  units.append(aluShape(180, 70, 56, 110, "unit", "PC + 4 adder"), text(214, 125, "Add", "unit-small"));
 
   // Instruction memory
-  units.append(
-    box(150, 360, 150, 190, "memory", "Instruction memory"),
-    text(225, 384, "Instruction", "unit-title"),
-    text(225, 404, "memory", "unit-title"),
-    text(156, 455, "Read", "port", "start"),
-    text(156, 470, "address", "port", "start"),
-    text(294, 440, "Instruction", "port", "end"),
-    text(225, 505, "", "unit-value mono"),
-    text(225, 527, "", "unit-asm mono"),
-  );
-  units.children[units.children.length - 2]!.setAttribute("id", "im-word");
-  units.lastElementChild!.setAttribute("id", "im-asm");
-
-  // Jump: shift left 2 and concatenate with PC + 4 [31-28]
-  units.append(
-    box(390, 30, 80, 28, "unit", "Shift left 2 (jump target × 4)"),
-    text(430, 44, "Shift left 2", "unit-small"),
-    box(520, 26, 120, 36, "unit", "Concatenate: PC+4 [31-28] with target × 4"),
-    text(580, 44, "{ PC+4, · }", "unit-small mono"),
+  unit(
+    "u-im",
+    s("rect", { x: 40, y: 200, width: 172, height: 172, class: "box k-mem" }),
+    text(126, 224, "Instruction memory", "u-title"),
+    s("text", { x: 126, y: 290, class: "u-mid", "text-anchor": "middle", "data-v": "word" }),
+    s("text", { x: 126, y: 326, class: "u-small", "text-anchor": "middle", "data-v": "asm" }),
   );
 
   // Control
-  const ctl = s("g", { id: "control" });
-  ctl.append(
-    box(390, 140, 130, 232, "unit", "Main control unit"),
-    text(455, 158, "Control", "block-label"),
-    s("line", { x1: 390, y1: 172, x2: 520, y2: 172, class: "ctl-rule" }),
+  unit(
+    "u-ctl",
+    s("rect", { x: 290, y: 100, width: 280, height: 170, class: "box k-ctl" }),
+    text(306, 124, "Control", "u-title", "start"),
+    s("text", { x: 430, y: 168, class: "u-asm", "text-anchor": "middle", "data-v": "ctl-asm" }),
+    s("g", { class: "chips", "data-v": "chips" }),
   );
-  CONTROL_ROWS.forEach((row, i) => {
-    const y = 186 + i * 16.8;
-    ctl.append(
-      text(400, y, row.name, "ctl-name", "start"),
-      s("text", { x: 510, y, class: "ctl-val", "text-anchor": "end", "data-row": i }, ""),
+
+  // Registers
+  const regs = unit(
+    "u-regs",
+    s("rect", { x: 290, y: 330, width: 280, height: 202, class: "box k-reg" }),
+    text(306, 354, "Registers", "u-title", "start"),
+  );
+  ([
+    ["rs", 392, "read"],
+    ["rt", 440, "read"],
+    ["wr", 498, "write"],
+  ] as const).forEach(([key, y, role]) => {
+    regs.append(
+      s(
+        "g",
+        { class: "reg-row", "data-row": key },
+        text(306, y, role, "r-role", "start"),
+        s("text", { x: 362, y, class: "r-name", "text-anchor": "start" }),
+        s("text", { x: 554, y, class: "r-val", "text-anchor": "end" }),
+      ),
     );
   });
-  units.append(ctl);
+  regs.append(s("line", { x1: 300, y1: 468, x2: 560, y2: 468, class: "r-rule" }));
 
-  // Register file
-  units.append(
-    box(560, 370, 170, 210, "register", "Register file"),
-    text(645, 475, "Registers", "unit-title"),
-    text(566, 400, "Read reg 1", "port", "start"),
-    text(566, 440, "Read reg 2", "port", "start"),
-    text(566, 507, "Write reg", "port", "start"),
-    text(566, 550, "Write data", "port", "start"),
-    text(724, 405, "Read data 1", "port", "end"),
-    text(724, 505, "Read data 2", "port", "end"),
+  // ALU B select
+  unit("u-mux", s("rect", { x: 640, y: 446, width: 18, height: 58, rx: 9, class: "box k-mux" }));
+
+  // ALU
+  unit(
+    "u-alu",
+    s("path", {
+      d: "M 680 305 L 830 365 L 830 475 L 680 535 L 680 445 L 712 420 L 680 395 Z",
+      class: "box k-alu",
+    }),
+    text(772, 372, "ALU", "u-title"),
+    s("text", { x: 772, y: 412, class: "u-asm", "text-anchor": "middle", "data-v": "alu-op" }),
+    s("text", { x: 772, y: 448, class: "u-small", "text-anchor": "middle", "data-v": "alu-in" }),
   );
 
-  // Sign-extend
-  units.append(
-    s("ellipse", { cx: 645, cy: 650, rx: 40, ry: 26, class: "block unit" }, s("title", {}, "Sign-extend (zero-extend for andi, ori, lui)")),
-    text(645, 643, "Sign-", "unit-small"),
-    text(645, 659, "extend", "unit-small"),
-  );
-
-  // Branch: shift left 2, adder, AND gate
-  units.append(
-    box(815, 290, 50, 30, "unit", "Shift left 2 (branch offset × 4)"),
-    text(840, 305, "<< 2", "unit-small mono"),
-    aluShape(880, 170, 56, 110, "unit", "Branch target adder"),
-    text(914, 225, "Add", "unit-small"),
-  );
-  // AND gate pointing up: Branch · Zero (bne inverts Zero).
-  units.append(
-    s(
-      "path",
-      { d: "M 1003 330 L 1003 306 A 20 20 0 0 1 1043 306 L 1043 330 Z", class: "block unit", id: "gate" },
-      s("title", {}, "Branch taken: Branch AND Zero (beq) / Branch AND NOT Zero (bne)"),
-    ),
-    s("circle", { cx: 1013, cy: 334, r: 4, class: "block bubble", id: "bne-bubble" }),
-  );
-
-  // ALU and ALU control
-  units.append(
-    aluShape(870, 380, 90, 190, "unit", "ALU"),
-    text(930, 475, "ALU", "unit-title"),
-    s("text", { x: 930, y: 497, class: "unit-op mono", "text-anchor": "middle", id: "alu-op" }, ""),
-    text(954, 445, "Zero", "port", "end"),
-    text(954, 513, "result", "port", "end"),
-    s("ellipse", { cx: 915, cy: 690, rx: 48, ry: 26, class: "block unit" }, s("title", {}, "ALU control")),
-    text(915, 683, "ALU", "unit-small"),
-    text(915, 699, "control", "unit-small"),
+  // Next PC
+  unit(
+    "u-next",
+    s("rect", { x: 680, y: 100, width: 232, height: 112, class: "box k-ctl" }),
+    text(696, 124, "Next PC", "u-title", "start"),
+    s("text", { x: 796, y: 164, class: "u-big", "text-anchor": "middle", "data-v": "next" }),
+    s("text", { x: 796, y: 194, class: "u-small", "text-anchor": "middle", "data-v": "next-why" }),
   );
 
   // Data memory
-  units.append(
-    box(1040, 400, 170, 200, "memory", "Data memory"),
-    text(1125, 450, "Data", "unit-title"),
-    text(1125, 470, "memory", "unit-title"),
-    text(1046, 500, "Address", "port", "start"),
-    text(1046, 570, "Write data", "port", "start"),
-    text(1204, 490, "Read data", "port", "end"),
-  );
-
-  for (const m of MUXES) units.append(muxShape(m));
-  for (const st of STUBS) units.append(stubNode(st));
-  // ALUOp from control into ALU control (left side).
-  units.append(
-    s("g", { class: "stub", "data-id": "s-aluop" },
-      s("line", { x1: 840, y1: 690, x2: 867, y2: 690, class: "stub-line" }),
-      s("text", { x: 836, y: 690, class: "stub-text", "text-anchor": "end" }, s("tspan", { class: "stub-name" }, "ALUOp "), s("tspan", { class: "stub-val" }, "")),
-    ),
+  unit(
+    "u-dm",
+    s("rect", { x: 1010, y: 300, width: 160, height: 202, class: "box k-mem" }),
+    text(1090, 324, "Data memory", "u-title"),
+    s("text", { x: 1090, y: 372, class: "u-small", "text-anchor": "middle", "data-v": "dm-op" }),
+    s("text", { x: 1090, y: 404, class: "u-mid", "text-anchor": "middle", "data-v": "dm-addr" }),
+    s("text", { x: 1090, y: 452, class: "u-big", "text-anchor": "middle", "data-v": "dm-val" }),
   );
 
   svg.append(units);
 
   // ---------- update ----------
 
-  const wireEls = new Map<string, SVGGElement>();
-  svg.querySelectorAll<SVGGElement>("g.wire").forEach((g) => wireEls.set(g.dataset.id!, g));
+  const busEls = new Map<string, SVGGElement>();
+  svg.querySelectorAll<SVGGElement>("g.bus").forEach((g) => busEls.set(g.dataset.id!, g));
+  const field = (key: string) => svg.querySelector<SVGTextElement>(`[data-v="${key}"]`)!;
 
-  function setText(sel: string, value: string): void {
-    const el = svg.querySelector(sel);
-    if (el) el.textContent = value;
+  function setRow(key: "rs" | "rt" | "wr", show: boolean, name: string, val: string, cls: string): void {
+    const row = svg.querySelector<SVGGElement>(`[data-row="${key}"]`)!;
+    row.classList.toggle("off", !show);
+    const nameEl = row.querySelector(".r-name")!;
+    nameEl.textContent = show ? name : "—";
+    nameEl.setAttribute("class", `r-name ${show ? cls : ""}`);
+    row.querySelector(".r-val")!.textContent = show ? val : "";
   }
 
   function update(v: View, upTo: Phase): void {
     const u = usage(v);
+    const ran = v.t;
 
-    for (const w of WIRES) {
-      const g = wireEls.get(w.id)!;
-      const active = w.on(u, v);
-      g.classList.toggle("on", active && w.phase <= upTo);
-      g.classList.toggle("used", active);
-      if (w.tag) {
-        const val = active && w.phase <= upTo ? w.tag.value(v) : null;
+    for (const b of BUSES) {
+      const g = busEls.get(b.id)!;
+      const lit = b.on(u, v) && b.phase <= upTo;
+      g.classList.toggle("on", lit);
+      if (b.tag) {
+        const val = lit ? b.tag.value(v, u) : null;
         const tg = g.querySelector<SVGGElement>(".tag")!;
         tg.style.display = val === null ? "none" : "";
         if (val !== null) {
           tg.querySelector("text")!.textContent = val;
-          const width = Math.max(22, val.length * 8.2 + 10);
+          const w = Math.max(28, val.length * 9.6 + 14);
           const r = tg.querySelector("rect")!;
-          r.setAttribute("x", String(-width / 2));
-          r.setAttribute("width", String(width));
+          r.setAttribute("x", String(-w / 2));
+          r.setAttribute("width", String(w));
         }
       }
     }
-    for (const f of FLAGS) {
-      const g = wireEls.get(f.id)!;
-      const active = f.on(u, v);
-      g.classList.toggle("on", active && f.phase <= upTo);
-      g.classList.toggle("used", active);
-    }
 
-    for (const m of MUXES) {
-      const g = svg.querySelector<SVGGElement>(`#${m.id}`)!;
-      const pick = upTo >= 1 ? m.pick(u, v) : null;
-      const sel = g.querySelector(".mux-sel")!;
-      if (pick === null) {
-        sel.setAttribute("d", "");
-      } else {
-        const outY = m.y + m.h / 2;
-        const inY = m.inputs[pick]!.y;
-        sel.setAttribute("d", `M ${m.x + 2} ${inY} L ${m.x + 24} ${outY}`);
+    // Units the instruction doesn't touch fade back.
+    const decoded = upTo >= 1;
+    svg.querySelector("#u-alu")!.classList.toggle("idle", !u.aluUsed || upTo < 2);
+    svg.querySelector("#u-mux")!.classList.toggle("idle", !u.aluUsed || upTo < 2);
+    svg.querySelector("#u-dm")!.classList.toggle("idle", !u.mem || upTo < 3);
+    svg.querySelector("#u-ctl")!.classList.toggle("idle", !decoded);
+    svg.querySelector("#u-regs")!.classList.toggle("idle", !decoded);
+
+    field("pc").textContent = addr(v.pc);
+    field("word").textContent = hex8(v.d.raw);
+    field("asm").textContent = u.known ? v.d.disassembly : "not supported";
+
+    // Control: the instruction, and only the signals that are on.
+    field("ctl-asm").textContent = decoded ? (u.known ? v.d.disassembly : "?") : "";
+    const chips = field("chips");
+    chips.replaceChildren();
+    if (decoded && u.known) {
+      let x = 306;
+      let y = 214;
+      const on = SIGNALS.filter(([k]) => v.c[k] === true).map(([, n]) => n);
+      if (u.aluUsed) on.push(`ALU ${v.c.alu_op}`);
+      for (const name of on) {
+        const w = name.length * 7 + 18;
+        if (x + w > 556) {
+          x = 306;
+          y += 28;
+        }
+        chips.append(
+          s("rect", { x, y: y - 11, width: w, height: 22, rx: 11, class: "chip" }),
+          text(x + w / 2, y + 1, name, "chip-text"),
+        );
+        x += w + 6;
       }
-      g.classList.toggle("idle", pick === null);
-      m.inputs.forEach((_, i) => g.querySelector(`.mux-in-${i}`)!.classList.toggle("picked", i === pick));
     }
 
-    // Control values appear once the instruction is decoded.
-    const decoded = upTo >= 1 && u.known;
-    svg.querySelectorAll<SVGTextElement>(".ctl-val").forEach((el) => {
-      const row = CONTROL_ROWS[Number(el.dataset.row)]!;
-      const val = decoded ? row.value(v.c) : "";
-      el.textContent = val;
-      el.classList.toggle("hi", val !== "0" && val !== "");
-    });
-    for (const st of STUBS) {
-      const g = svg.querySelector<SVGGElement>(`[data-id="${st.id}"]`)!;
-      const val = decoded ? st.value(v) : "";
-      g.querySelector(".stub-val")!.textContent = val;
-      g.classList.toggle("hi", val === "1");
-    }
-    const aluop = svg.querySelector<SVGGElement>('[data-id="s-aluop"]')!;
-    aluop.querySelector(".stub-val")!.textContent = decoded && u.aluUsed ? v.c.alu_op : "";
-    aluop.classList.toggle("hi", decoded && u.aluUsed);
+    // Registers: what is read and what is written.
+    const rn = v.regName;
+    setRow("rs", decoded && u.readsRs, rn(v.d.rs), dec(ran ? ran.rs_value : v.rsValue), "f-rs");
+    setRow("rt", decoded && (u.readsRt || u.shift), rn(v.d.rt), dec(ran ? ran.rt_value : v.rtValue), "f-rt");
+    const dest = ran && ran.reg_written ? ran.reg_dest : v.c.link ? 31 : v.c.reg_dst ? v.d.rd : v.d.rt;
+    const wbVal = ran && ran.reg_written && upTo >= 4 ? dec(ran.reg_value) : "…";
+    setRow("wr", decoded && v.c.reg_write, rn(dest), wbVal, v.c.reg_dst ? "f-rd" : "f-rt");
 
-    setText("#pc-value", addr(v.pc));
-    setText("#im-word", "0x" + (v.d.raw >>> 0).toString(16).toUpperCase().padStart(8, "0"));
-    setText("#im-asm", u.known ? v.d.disassembly : "not supported");
-    setText("#alu-op", upTo >= 2 && u.aluUsed ? v.c.alu_op : "");
-    svg.querySelector("#bne-bubble")!.classList.toggle("shown", v.d.mnemonic === "bne");
-    svg.classList.toggle("unknown", !u.known);
-    svg.setAttribute("aria-label", `Single-cycle datapath: ${u.known ? v.d.disassembly : "unsupported instruction"}`);
+    field("alu-op").textContent = u.aluUsed && upTo >= 2 ? v.c.alu_op : "";
+    // The two operands, as the ALU saw them (from the trace once the step has run).
+    let ins = "";
+    if (u.aluUsed && upTo >= 1) {
+      const a = ran ? ran.alu_a : u.shift ? v.rtValue : v.rsValue;
+      const b = ran ? ran.alu_b : u.aluBImm ? (u.shift ? v.d.shamt : immValue(v)) : v.rtValue;
+      ins = u.aluA ? `${dec(a)}, ${dec(b)}` : dec(b);
+    }
+    field("alu-in").textContent = ins;
+
+    // Next PC: value and the reason.
+    field("next").textContent = upTo >= 4 && ran ? addr(ran.next_pc) : "";
+    let why = "PC + 4";
+    if (v.c.jump_reg) why = `jr: from ${rn(v.d.rs)}`;
+    else if (v.c.jump) why = v.c.link ? "jump and link" : "jump";
+    else if (v.c.branch) why = ran ? (ran.branch_taken ? "branch taken" : "branch not taken") : "branch?";
+    field("next-why").textContent = upTo >= 2 || !v.c.branch ? why : "";
+
+    // Data memory: the one word touched.
+    const memShown = u.mem && upTo >= 3;
+    field("dm-op").textContent = memShown ? (v.c.mem_write ? "write" : "read") : "";
+    field("dm-addr").textContent = memShown && ran ? `[${addr(ran.mem_addr)}]` : "";
+    field("dm-val").textContent = memShown && ran ? dec(v.c.mem_write ? ran.rt_value : ran.mem_data) : "";
+
+    svg.setAttribute("aria-label", `Datapath: ${u.known ? v.d.disassembly : "unsupported instruction"}`);
   }
 
   return { svg, update };

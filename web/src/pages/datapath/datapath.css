@@ -36,12 +36,89 @@
 
 /* ---------- Layout ---------- */
 
+/* Three columns under the toolbar:
+   instruction memory + registers | datapath | data memory.
+   The page itself does not scroll on wide screens; each side column scrolls on its own
+   so the figure always stays in view. */
+body:has(> .dp) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 .dp {
-  /* Wide enough to read, short enough that the whole figure fits under the toolbar. */
-  max-width: min(1500px, calc((100vh - 120px) * 1.78 + 32px));
-  min-width: min(100%, 1100px);
-  margin: 0 auto;
-  padding: 12px 16px 32px;
+  --side-left: clamp(360px, 25vw, 440px);
+  --side-right: clamp(250px, 17vw, 300px);
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: var(--side-left) minmax(0, 1fr) var(--side-right);
+  grid-template-areas: "left figure right";
+  gap: 14px;
+  min-height: 0;
+  padding: 12px 14px;
+}
+
+.dp-left   { grid-area: left; }
+.dp-figure { grid-area: figure; }
+.dp-right  { grid-area: right; }
+
+.dp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dp-figure {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dp-figure .dp-scroll {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Registers in the narrow left column: two columns of sixteen */
+.dp-left .regs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(16, auto);
+}
+
+/* Narrower screens: the figure goes on top, memories and registers below it, page scrolls. */
+@media (max-width: 1280px) {
+  body:has(> .dp) {
+    height: auto;
+  }
+
+  .dp {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "figure figure"
+      "left   right";
+    height: auto;
+  }
+
+  .dp-side {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .dp {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "figure"
+      "left"
+      "right";
+    padding: 12px 16px;
+  }
 }
 
 .dp-head {
@@ -130,26 +207,20 @@
 .dp-scroll svg {
   display: block;
   width: 100%;
-  min-width: 980px;
+  min-width: 760px;
+  max-height: 100%;
   height: auto;
 }
 
-.dp-panels {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 0.9fr);
-  gap: 16px;
-  margin-top: 16px;
-}
-
-@media (max-width: 1000px) {
-  .dp-panels {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .panel {
+  flex: 0 0 auto;
   min-width: 0;
   border: 1px solid var(--ink);
+}
+
+/* Data memory fills the right column */
+.dp-right .panel-mem {
+  flex: 1 1 auto;
 }
 
 .panel h2 {
@@ -358,118 +429,153 @@
   font-weight: 700;
 }
 
-/* ---------- The figure ---------- */
+/* ---------- The figure ----------
+   Minimal: big blocks, thick named buses, large values. Grey = idle, ink = carrying data. */
 
 .datapath text {
   dominant-baseline: middle;
   font-family: var(--font-label);
 }
 
-.datapath .mono,
-.datapath .tag-text,
-.datapath .ctl-val,
-.datapath .w-bits {
-  font-family: var(--font-code);
-}
-
-.block {
-  stroke: var(--rule);
+.cpu-frame {
+  fill: #fafafa;
+  stroke: var(--bar-edge);
   stroke-width: 2;
 }
 
-.block.register { fill: var(--fill-register); }
-.block.memory   { fill: var(--fill-register); }
-.block.unit     { fill: var(--fill-unit); }
-.mux-body       { fill: #fff; }
+.cpu-label {
+  fill: #b5b5b5;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
 
-.block-label {
+/* Blocks */
+
+.box {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.box.k-reg { fill: var(--fill-register); }
+.box.k-mem { fill: var(--fill-register); }
+.box.k-ctl { fill: var(--fill-unit); }
+.box.k-alu { fill: var(--fill-unit); }
+.box.k-mux { fill: #fff; }
+
+.unit {
+  transition: opacity 0.25s;
+}
+
+.unit.idle {
+  opacity: 0.35;
+}
+
+.u-title {
   fill: var(--ink);
   font-size: 15px;
   font-weight: 700;
-  text-anchor: middle;
 }
 
-.unit-title {
+.u-big {
   fill: var(--ink);
-  font-size: 15px;
+  font-family: var(--font-code) !important;
+  font-size: 26px;
   font-weight: 700;
 }
 
-.unit-small {
+.u-mid {
   fill: var(--ink);
-  font-size: 12px;
+  font-family: var(--font-code) !important;
+  font-size: 17px;
   font-weight: 700;
 }
 
-.unit-value {
-  fill: var(--ink);
-  font-family: var(--font-code);
-  font-size: 13px;
+.u-small {
+  fill: var(--ink-soft);
+  font-family: var(--font-code) !important;
+  font-size: 13.5px;
   font-weight: 700;
 }
 
-.unit-asm {
+.u-asm {
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Control: only the signals that are on, as pills */
+
+.chip {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.chip-text {
   fill: var(--ink);
   font-size: 11.5px;
   font-weight: 700;
 }
 
-.unit-op {
-  fill: var(--f-funct);
-  font-size: 14px;
+/* Registers block rows */
+
+.r-role {
+  fill: var(--ink-soft);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.r-name {
+  fill: #b5b5b5;
+  font-family: var(--font-code) !important;
+  font-size: 20px;
   font-weight: 700;
 }
 
-.port {
-  fill: var(--ink-soft);
-  font-size: 11px;
+.r-name.f-rs,
+.r-name.f-rt,
+.r-name.f-rd {
+  fill: var(--fc);
 }
 
-/* Control unit */
+.r-val {
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
+  font-size: 22px;
+  font-weight: 700;
+}
 
-.ctl-rule {
-  stroke: var(--rule);
+.reg-row.off .r-role {
+  fill: #c4c4c4;
+}
+
+.r-rule {
+  stroke: var(--bar-edge);
   stroke-width: 1;
 }
 
-.ctl-name {
-  fill: var(--ink-soft);
-  font-size: 12px;
-}
+/* Buses */
 
-.ctl-val {
-  fill: var(--ink-soft);
-  font-size: 13px;
-}
-
-.ctl-val.hi {
-  fill: var(--ink);
-  font-weight: 700;
-}
-
-/* Wires: grey when unused, black (or the field colour) when carrying a signal */
-
-.wire .w-line {
+.bus .b-line {
   fill: none;
-  stroke: #c3c3c3;
-  stroke-width: 1.6;
-  stroke-linejoin: miter;
+  stroke: #dadada;
+  stroke-width: 5;
+  stroke-linejoin: round;
 }
 
-.wire .w-dot,
-.wire .w-head { fill: #c3c3c3; }
-
-.wire.on .w-line {
-  stroke: var(--fc, var(--ink));
-  stroke-width: 2.6;
+.bus .b-head,
+.bus .b-dot {
+  fill: #dadada;
 }
 
-.wire.on .w-dot,
-.wire.on .w-head {
-  fill: var(--fc, var(--ink));
-}
+.bus.on .b-line { stroke: var(--ink); }
+.bus.on .b-head,
+.bus.on .b-dot { fill: var(--ink); }
 
-.wire.on.draw .w-line {
+.bus.on.draw .b-line {
   stroke-dasharray: 1;
   animation: draw 0.42s ease-out both;
 }
@@ -479,88 +585,33 @@
   to   { stroke-dashoffset: 0; }
 }
 
-.wire:hover .w-line {
-  stroke-width: 4;
-}
-
-.w-bits {
-  fill: #9a9a9a;
-  font-size: 11px;
-}
-
-.wire.on .w-bits {
-  fill: var(--fc, var(--ink));
+.b-label {
+  fill: #b5b5b5;
+  font-size: 12.5px;
   font-weight: 700;
 }
 
-.flag-text {
-  fill: #9a9a9a;
-  font-size: 11px;
-  font-style: italic;
+.bus.on .b-label {
+  fill: var(--ink-soft);
 }
 
-.wire.on .flag-text {
-  fill: var(--ink);
-  font-weight: 700;
-}
-
-/* Value tags sit on their wire */
+/* Value tags ride on their bus */
 
 .tag-box {
-  fill: #fff;
-  stroke: var(--fc, var(--ink));
-  stroke-width: 1.2;
+  fill: var(--fill-output);
+  stroke: var(--ink);
+  stroke-width: 1.5;
 }
 
 .tag-text {
   fill: var(--ink);
-  font-size: 12.5px;
+  font-family: var(--font-code) !important;
+  font-size: 15px;
   font-weight: 700;
   text-anchor: middle;
 }
 
-/* Muxes */
-
-.mux-in {
-  fill: #9a9a9a;
-  font-size: 10px;
-}
-
-.mux-in.picked {
-  fill: var(--ink);
-  font-weight: 700;
-}
-
-.mux-sel {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-/* Control stubs */
-
-.stub-line {
-  stroke: #9a9a9a;
-  stroke-width: 1.4;
-  stroke-dasharray: 3 2;
-}
-
-.stub-text {
-  font-size: 11px;
-}
-
-.stub-name { fill: #8a8a8a; }
-.stub-val  { fill: #8a8a8a; font-family: var(--font-code); font-weight: 700; }
-
-.stub.hi .stub-line { stroke: var(--ink); stroke-dasharray: none; }
-.stub.hi .stub-name { fill: var(--ink); }
-.stub.hi .stub-val  { fill: var(--ink); }
-
-.bubble { fill: #fff; display: none; }
-.bubble.shown { display: inline; }
-
-.datapath.unknown .units { opacity: 0.55; }
-
 @media (prefers-reduced-motion: reduce) {
-  .wire.on.draw .w-line { animation: none; stroke-dasharray: none; }
+  .bus.on.draw .b-line { animation: none; stroke-dasharray: none; }
+  .unit { transition: none; }
 }

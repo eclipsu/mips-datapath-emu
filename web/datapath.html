@@ -20,16 +20,9 @@
       </div>
     </header>
     <main class="dp" id="stage">
-      <section class="dp-figure" aria-label="Datapath">
-        <div class="dp-head">
-          <ol class="phases" id="phases" aria-label="Phases of the cycle"></ol>
-          <p class="status" id="status" aria-live="polite"></p>
-        </div>
-        <p class="notice" id="notice" hidden></p>
-        <div class="dp-scroll" id="figure"></div>
-      </section>
-      <div class="dp-panels">
-        <section class="panel" aria-labelledby="h-program">
+      <!-- Left: what the CPU reads its instructions from, and the register file -->
+      <aside class="dp-side dp-left" aria-label="Instruction memory and registers">
+        <section class="panel panel-program" aria-labelledby="h-program">
           <h2 id="h-program">Instruction memory</h2>
           <ol class="listing" id="listing"></ol>
           <details class="editor">
@@ -42,16 +35,30 @@
             </div>
           </details>
         </section>
-        <section class="panel" aria-labelledby="h-regs">
+        <section class="panel panel-regs" aria-labelledby="h-regs">
           <h2 id="h-regs">Registers</h2>
           <div class="regs" id="regs"></div>
         </section>
-        <section class="panel" aria-labelledby="h-mem">
+      </aside>
+
+      <!-- Center: the datapath figure -->
+      <section class="dp-figure" aria-label="Datapath">
+        <div class="dp-head">
+          <ol class="phases" id="phases" aria-label="Phases of the cycle"></ol>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+        <p class="notice" id="notice" hidden></p>
+        <div class="dp-scroll" id="figure"></div>
+      </section>
+
+      <!-- Right: data memory (lw / sw) -->
+      <aside class="dp-side dp-right" aria-label="Data memory">
+        <section class="panel panel-mem" aria-labelledby="h-mem">
           <h2 id="h-mem">Data memory</h2>
           <label class="mem-base">From <input id="mem-base" type="text" value="0x100" spellcheck="false" /></label>
           <table class="mem" id="mem"></table>
         </section>
-      </div>
+      </aside>
     </main>
     <script type="module" src="/src/pages/datapath/main.ts"></script>
   </body>

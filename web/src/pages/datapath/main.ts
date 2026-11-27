@@ -51,7 +51,7 @@ const PROGRAMS: { name: string; source: string }[] = [
 ];
 
 const MEM_BYTES = 4096;
-const MEM_ROWS = 8;
+const MEM_ROWS = 32; // words shown in the data memory column (128 bytes from the base)
 const RUN_DELAY_MS = 1400;
 const PHASE_MS = 360;
 
@@ -154,9 +154,9 @@ async function main(): Promise<void> {
 
   function showPhase(p: Phase, animate: boolean): void {
     if (!view) return;
-    const before = new Set([...diagram.svg.querySelectorAll(".wire.on")]);
+    const before = new Set([...diagram.svg.querySelectorAll(".bus.on")]);
     diagram.update(view, p);
-    diagram.svg.querySelectorAll(".wire").forEach((w) => {
+    diagram.svg.querySelectorAll(".bus").forEach((w) => {
       w.classList.toggle("draw", animate && w.classList.contains("on") && !before.has(w));
     });
     phaseBtns.forEach((b, i) => {
