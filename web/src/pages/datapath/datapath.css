@@ -1,0 +1,566 @@
+/* Datapath page. Same lecture-figure look as the decoder: white page, black outlines,
+   block fills from tokens.css, Arial labels, Courier values. */
+
+/* ---------- Toolbar additions ---------- */
+
+.controls {
+  display: flex;
+  gap: 6px;
+}
+
+.controls button,
+.editor button {
+  height: 30px;
+  min-width: 64px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.controls button.primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.controls button[aria-pressed="true"] {
+  background: var(--fill-output);
+}
+
+.controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- Layout ---------- */
+
+.dp {
+  /* Wide enough to read, short enough that the whole figure fits under the toolbar. */
+  max-width: min(1500px, calc((100vh - 120px) * 1.78 + 32px));
+  min-width: min(100%, 1100px);
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.dp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-bottom: 8px;
+}
+
+.phases {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--ink);
+}
+
+.phases button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid var(--bar-edge);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.phases li:first-child button {
+  border-left: 0;
+}
+
+.phases button[aria-current="step"] {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+.phases button.done {
+  color: var(--ink);
+}
+
+.status {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.status .muted {
+  color: var(--ink-soft);
+  font-family: var(--font-label);
+  font-weight: 400;
+}
+
+.notice {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--f-imm);
+  background: #fff6ee;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.notice.bad {
+  border-left-color: var(--danger);
+  background: #fdf0f0;
+  color: var(--danger);
+}
+
+.notice code {
+  font-family: var(--font-code);
+  font-weight: 700;
+}
+
+.dp-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--bar-edge);
+}
+
+.dp-scroll svg {
+  display: block;
+  width: 100%;
+  min-width: 980px;
+  height: auto;
+}
+
+.dp-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 0.9fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1000px) {
+  .dp-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--ink);
+}
+
+.panel h2 {
+  margin: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--ink);
+  background: var(--fill-register);
+  font-size: 15px;
+}
+
+/* ---------- Instruction memory listing ---------- */
+
+.listing {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  font-family: var(--font-code);
+  font-size: 14px;
+}
+
+.listing li {
+  display: grid;
+  grid-template-columns: 3.2em 5.6ch 7.6em minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.listing .mark {
+  color: var(--ink-soft);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.listing .a {
+  color: var(--ink-soft);
+}
+
+.listing .asm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+
+.listing li.next {
+  background: var(--fill-output);
+}
+
+.listing li.ran {
+  outline: 1px dashed var(--ink-soft);
+  outline-offset: -1px;
+}
+
+.editor {
+  border-top: 1px solid var(--bar-edge);
+  padding: 6px 10px 10px;
+}
+
+.editor summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.editor textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-code);
+  font-size: 14px;
+  resize: vertical;
+}
+
+.editor .hint {
+  margin: 6px 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.editor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+/* ---------- Registers ---------- */
+
+.regs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-template-rows: repeat(8, auto);
+  padding: 4px 0;
+}
+
+@media (max-width: 560px) {
+  .regs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(16, auto);
+  }
+}
+
+.reg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  font-family: var(--font-code);
+  font-size: 14px;
+}
+
+.reg .n {
+  flex: 0 0 4.2ch;
+  color: var(--ink-soft);
+}
+
+.reg input,
+.mem input {
+  width: 100%;
+  min-width: 0;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-code);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reg input:hover,
+.mem input:hover {
+  border-color: var(--bar-edge);
+}
+
+.reg input:focus,
+.mem input:focus {
+  border-color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.reg input:disabled {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.reg.read-rs .n { color: var(--f-rs); font-weight: 700; }
+.reg.read-rt .n { color: var(--f-rt); font-weight: 700; }
+
+.reg.written,
+.mem tr.written td {
+  background: var(--fill-output);
+}
+
+/* ---------- Data memory ---------- */
+
+.mem-base {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 4px;
+  font-size: 14px;
+}
+
+.mem-base input {
+  width: 10ch;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-code);
+  font-weight: 700;
+}
+
+.mem {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-code);
+  font-size: 14px;
+}
+
+.mem td {
+  padding: 1px 10px;
+}
+
+.mem td.a {
+  width: 7ch;
+  color: var(--ink-soft);
+}
+
+.mem td.h {
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+.mem tr.accessed td.a {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ---------- The figure ---------- */
+
+.datapath text {
+  dominant-baseline: middle;
+  font-family: var(--font-label);
+}
+
+.datapath .mono,
+.datapath .tag-text,
+.datapath .ctl-val,
+.datapath .w-bits {
+  font-family: var(--font-code);
+}
+
+.block {
+  stroke: var(--rule);
+  stroke-width: 2;
+}
+
+.block.register { fill: var(--fill-register); }
+.block.memory   { fill: var(--fill-register); }
+.block.unit     { fill: var(--fill-unit); }
+.mux-body       { fill: #fff; }
+
+.block-label {
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.unit-title {
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.unit-small {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.unit-value {
+  fill: var(--ink);
+  font-family: var(--font-code);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.unit-asm {
+  fill: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.unit-op {
+  fill: var(--f-funct);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.port {
+  fill: var(--ink-soft);
+  font-size: 11px;
+}
+
+/* Control unit */
+
+.ctl-rule {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.ctl-name {
+  fill: var(--ink-soft);
+  font-size: 12px;
+}
+
+.ctl-val {
+  fill: var(--ink-soft);
+  font-size: 13px;
+}
+
+.ctl-val.hi {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+/* Wires: grey when unused, black (or the field colour) when carrying a signal */
+
+.wire .w-line {
+  fill: none;
+  stroke: #c3c3c3;
+  stroke-width: 1.6;
+  stroke-linejoin: miter;
+}
+
+.wire .w-dot,
+.wire .w-head { fill: #c3c3c3; }
+
+.wire.on .w-line {
+  stroke: var(--fc, var(--ink));
+  stroke-width: 2.6;
+}
+
+.wire.on .w-dot,
+.wire.on .w-head {
+  fill: var(--fc, var(--ink));
+}
+
+.wire.on.draw .w-line {
+  stroke-dasharray: 1;
+  animation: draw 0.42s ease-out both;
+}
+
+@keyframes draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.wire:hover .w-line {
+  stroke-width: 4;
+}
+
+.w-bits {
+  fill: #9a9a9a;
+  font-size: 11px;
+}
+
+.wire.on .w-bits {
+  fill: var(--fc, var(--ink));
+  font-weight: 700;
+}
+
+.flag-text {
+  fill: #9a9a9a;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.wire.on .flag-text {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+/* Value tags sit on their wire */
+
+.tag-box {
+  fill: #fff;
+  stroke: var(--fc, var(--ink));
+  stroke-width: 1.2;
+}
+
+.tag-text {
+  fill: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* Muxes */
+
+.mux-in {
+  fill: #9a9a9a;
+  font-size: 10px;
+}
+
+.mux-in.picked {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.mux-sel {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+/* Control stubs */
+
+.stub-line {
+  stroke: #9a9a9a;
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2;
+}
+
+.stub-text {
+  font-size: 11px;
+}
+
+.stub-name { fill: #8a8a8a; }
+.stub-val  { fill: #8a8a8a; font-family: var(--font-code); font-weight: 700; }
+
+.stub.hi .stub-line { stroke: var(--ink); stroke-dasharray: none; }
+.stub.hi .stub-name { fill: var(--ink); }
+.stub.hi .stub-val  { fill: var(--ink); }
+
+.bubble { fill: #fff; display: none; }
+.bubble.shown { display: inline; }
+
+.datapath.unknown .units { opacity: 0.55; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wire.on.draw .w-line { animation: none; stroke-dasharray: none; }
+}

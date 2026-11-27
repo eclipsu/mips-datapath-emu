@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Step a MIPS program through the single-cycle datapath, driven by the C++ core." />
+    <title>Datapath · MIPS pipe emu</title>
+  </head>
+  <body>
+    <header class="toolbar" id="toolbar">
+      <span class="name">MIPS pipe emu · Datapath</span>
+      <label>
+        Program
+        <select id="programs"></select>
+      </label>
+      <div class="controls" role="group" aria-label="Run controls">
+        <button type="button" id="step" class="primary" title="Run one instruction (S)">Step</button>
+        <button type="button" id="run" aria-pressed="false" title="Keep stepping (R)">Run</button>
+        <button type="button" id="reset" title="Reload the program and clear registers">Reset</button>
+      </div>
+    </header>
+    <main class="dp" id="stage">
+      <section class="dp-figure" aria-label="Datapath">
+        <div class="dp-head">
+          <ol class="phases" id="phases" aria-label="Phases of the cycle"></ol>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+        <p class="notice" id="notice" hidden></p>
+        <div class="dp-scroll" id="figure"></div>
+      </section>
+      <div class="dp-panels">
+        <section class="panel" aria-labelledby="h-program">
+          <h2 id="h-program">Instruction memory</h2>
+          <ol class="listing" id="listing"></ol>
+          <details class="editor">
+            <summary>Edit program</summary>
+            <textarea id="source" rows="9" spellcheck="false" aria-label="Program words, one per line"></textarea>
+            <p class="hint">One 32-bit word per line, hex. <code>#</code> starts a comment. Loaded at address 0.</p>
+            <div class="editor-row">
+              <button type="button" id="load">Load</button>
+              <span class="error" id="source-error" role="alert"></span>
+            </div>
+          </details>
+        </section>
+        <section class="panel" aria-labelledby="h-regs">
+          <h2 id="h-regs">Registers</h2>
+          <div class="regs" id="regs"></div>
+        </section>
+        <section class="panel" aria-labelledby="h-mem">
+          <h2 id="h-mem">Data memory</h2>
+          <label class="mem-base">From <input id="mem-base" type="text" value="0x100" spellcheck="false" /></label>
+          <table class="mem" id="mem"></table>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/pages/datapath/main.ts"></script>
+  </body>
+</html>

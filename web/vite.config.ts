@@ -7,6 +7,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         probe: new URL("./index.html", import.meta.url).pathname,
+        datapath: new URL("./datapath.html", import.meta.url).pathname,
       },
     },
   },
