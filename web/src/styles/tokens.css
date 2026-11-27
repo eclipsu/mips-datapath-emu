@@ -1,0 +1,31 @@
+/* Design tokens shared by every page.
+   Look: flat hardware diagram on black (pink chip body, teal value displays, dark wires). */
+
+:root {
+  color-scheme: dark;
+
+  --page: #000;
+  --toolbar: #111;
+  --toolbar-line: #222;
+  --text: #f2f2f2;
+  --text-dim: #9a9a9a;
+
+  --chip: #d79bbd;         /* chip body */
+  --chip-edge: #6b2f5c;
+  --chip-inner: #8c6a8a;   /* inner unit inside a chip */
+  --chip-ink: #1d1d1d;     /* labels drawn on the chip */
+
+  --display: #3a99a5;      /* value display */
+  --display-off: #6f7f82;  /* display for a field this format doesn't use */
+  --display-ink: #111;
+  --display-edge: #111;
+
+  --wire: #333;
+  --wire-live: #f5e663;    /* the one highlight colour */
+
+  --button: #1677ff;
+  --danger: #c0392b;
+
+  --font-ui: "Segoe UI", "Open Sans", "Noto Sans", system-ui, sans-serif;
+  --font-digits: ui-monospace, "SFMono-Regular", "DejaVu Sans Mono", Menlo, monospace;
+}

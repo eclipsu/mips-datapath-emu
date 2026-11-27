@@ -1,0 +1,132 @@
+/* Decoder diagram. Colours come from tokens.css. */
+
+.stage svg text {
+  dominant-baseline: middle;
+  font-family: var(--font-ui);
+}
+
+.title {
+  fill: var(--text);
+  font-size: 40px;
+  text-anchor: middle;
+}
+
+.chip {
+  fill: var(--chip);
+  stroke: var(--chip-edge);
+  stroke-width: 3;
+  rx: 8;
+}
+
+.unit {
+  fill: var(--chip-inner);
+  stroke: #4a1f45;
+  stroke-width: 3;
+}
+
+.unit-title {
+  fill: var(--chip-ink);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.label {
+  fill: var(--chip-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.note {
+  fill: var(--chip-ink);
+  font-size: 14px;
+}
+
+.bitnum {
+  fill: var(--chip-ink);
+  font-family: var(--font-digits) !important;
+  font-size: 12px;
+}
+
+.base-tag {
+  fill: var(--chip-ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.base-tag:hover {
+  text-decoration: underline;
+}
+
+/* Value displays */
+
+.display {
+  fill: var(--display);
+  stroke: var(--display-edge);
+  stroke-width: 3;
+}
+
+.display.bad {
+  fill: #c98a80;
+}
+
+.field.off .display {
+  fill: var(--display-off);
+}
+
+.digits {
+  fill: var(--display-ink);
+  font-family: var(--font-digits) !important;
+  font-size: 24px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.digits.big {
+  font-size: 30px;
+}
+
+.divider {
+  stroke: var(--display-edge);
+  stroke-width: 2;
+}
+
+/* Instruction-register bits: click to flip */
+
+.bit {
+  cursor: pointer;
+  outline: none;
+}
+
+.bit .hit {
+  fill: transparent;
+}
+
+.bit:not(.one) .digits {
+  fill: #1f5a62;
+}
+
+.bit:hover .hit,
+.bit:focus-visible .hit {
+  fill: var(--wire-live);
+}
+
+.bit:hover .digits,
+.bit:focus-visible .digits {
+  fill: var(--display-ink);
+}
+
+/* Wires: light up the whole path of the field under the pointer */
+
+.wire {
+  stroke: var(--wire);
+  stroke-width: 4;
+}
+
+.field:hover .wire {
+  stroke: var(--wire-live);
+}
+
+.field:hover .display {
+  stroke: var(--wire-live);
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Decode one 32-bit MIPS instruction word into its fields." />
+    <title>Decoder · MIPS pipe emu</title>
+  </head>
+  <body>
+    <header class="toolbar" id="toolbar">
+      <label>
+        Instruction word
+        <input id="word" type="text" spellcheck="false" autocomplete="off" aria-describedby="word-error" />
+      </label>
+      <span class="error" id="word-error" role="alert"></span>
+      <label>
+        Example
+        <select id="examples"></select>
+      </label>
+    </header>
+    <main class="stage" id="stage"></main>
+    <script type="module" src="/src/pages/probe/main.ts"></script>
+  </body>
+</html>
