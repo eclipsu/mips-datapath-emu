@@ -31,3 +31,6 @@ Thumbs.db
 # Logs and local config
 *.log
 .env
+
+# Generated WebAssembly module for the web UI (web/scripts/build-wasm.sh)
+web/src/wasm/
