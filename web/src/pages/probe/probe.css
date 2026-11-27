@@ -1,11 +1,7 @@
-/* Decoder diagram, drawn like the lecture datapath figures. */
-
 .stage svg text {
   dominant-baseline: middle;
   font-family: var(--font-label);
 }
-
-/* Blocks: square corners, black outlines */
 
 .block {
   stroke: var(--rule);
@@ -36,8 +32,6 @@
   font-weight: 700;
   white-space: pre;
 }
-
-/* Instruction register */
 
 .ir-hex {
   fill: var(--ink);
@@ -81,8 +75,6 @@
   font-size: 12px;
 }
 
-/* Wires */
-
 .field-wire .wire,
 .out-wire .wire {
   stroke-width: 3;
@@ -107,8 +99,6 @@
   font-size: 13px;
   font-weight: 700;
 }
-
-/* Field registers */
 
 .field-box {
   fill: var(--fill-field);
@@ -156,8 +146,6 @@
   font-size: 15px;
   font-weight: 700;
 }
-
-/* Assembly output */
 
 .asm {
   fill: var(--ink);

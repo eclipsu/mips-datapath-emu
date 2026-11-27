@@ -1,11 +1,8 @@
-// Loads the C++ core (WebAssembly) once and gives pages a typed handle to it.
-// All emulator logic lives in C++; this file only adapts the types.
-
 import createModule, { type DecodedWord as RawDecodedWord, type MainModule } from "../wasm/mipscore.mjs";
 
 export type Format = "R" | "I" | "J" | "Unknown";
 
-/** What mips::decode() returns for one word (see src/decode.hpp). */
+// Mirrors mips::Instruction (src/decode.hpp).
 export interface DecodedWord {
   raw: number;
   format: Format;
@@ -25,7 +22,6 @@ export interface DecodedWord {
 
 export interface Core {
   decode(word: number): DecodedWord;
-  /** Conventional register name, e.g. "$t0" for 8. */
   registerName(reg: number): string;
 }
 
@@ -39,7 +35,7 @@ export function loadCore(): Promise<Core> {
 function wrap(m: MainModule): Core {
   return {
     decode(word) {
-      // >>> 0 keeps the value an unsigned 32-bit integer on the way in and out.
+      // JS numbers are signed; >>> 0 keeps the word unsigned.
       const d: RawDecodedWord = m.decode(word >>> 0);
       return {
         ...d,

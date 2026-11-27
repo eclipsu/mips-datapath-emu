@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# Compile the C++ core and wasm/bindings.cpp into an ES module for the web UI.
-# Output: web/src/wasm/mipscore.mjs, mipscore.wasm, mipscore.d.mts (all generated, not committed).
-#
-# Needs Emscripten. If em++ is not on PATH, this sources $EMSDK/emsdk_env.sh
-# (default ~/emsdk).
+# Builds web/src/wasm/mipscore.{mjs,wasm,d.mts}. Uses em++ from PATH or $EMSDK (default ~/emsdk).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,7 +18,6 @@ fi
 
 mkdir -p "$out"
 
-# Only the units the bindings use. Add sources here as the bindings grow.
 sources=(
     "$root/src/decode.cpp"
     "$root/src/regfile.cpp"

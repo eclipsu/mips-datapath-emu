@@ -1,7 +1,3 @@
-/* Design tokens shared by every page.
-   Look: the datapath figures in the CE230 lectures. White page, black outlines,
-   solid field colours, Arial labels, Courier values. */
-
 :root {
   color-scheme: light;
 
@@ -12,22 +8,20 @@
   --bar: #f2f2f2;
   --bar-edge: #cfcfcf;
 
-  /* Block fills, as in the lecture datapath slides */
-  --fill-register: #fdeedd; /* register file / instruction register */
-  --fill-unit: #e4d9f1;     /* ALU-style unit */
-  --fill-output: #fff3b0;   /* yellow assembly box */
+  --fill-register: #fdeedd;
+  --fill-unit: #e4d9f1;
+  --fill-output: #fff3b0;
   --fill-field: #fff;
 
   --danger: #c62828;
 
-  /* Instruction fields: same colour on every page */
   --f-opcode: #15803d;
   --f-rs: #1d4ed8;
   --f-rt: #b02ab4;
   --f-rd: #d03030;
   --f-shamt: #5f6670;
   --f-funct: #0f8577;
-  --f-imm: #d45708;         /* immediate and J-type target */
+  --f-imm: #d45708;
 
   --font-label: Arial, "Liberation Sans", Helvetica, sans-serif;
   --font-code: "Courier New", "Liberation Mono", Courier, monospace;

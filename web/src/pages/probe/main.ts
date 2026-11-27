@@ -1,7 +1,3 @@
-// Decoder page: the browser version of `make probe WORD=0x...`, drawn like the datapath
-// figures in the lectures: instruction register -> field wires -> disassembler -> assembly.
-// Every decoded value comes from mips::decode() / mips::disassemble() in C++ (via WebAssembly).
-
 import "../../styles/base.css";
 import "./probe.css";
 
@@ -10,8 +6,6 @@ import { navLinks, showLoadError } from "../../shared/frame";
 
 // Words from tests/test_decode.cpp.
 const EXAMPLES = [0x2237fff1, 0x1520fffa, 0x012a4020, 0x00094100, 0x3108ffff, 0x2108ffff, 0x08000002];
-
-// ---------- Field layout (Lecture 18) ----------
 
 type FieldKey = "opcode" | "rs" | "rt" | "rd" | "shamt" | "funct" | "imm" | "target";
 
@@ -34,7 +28,7 @@ const LAYOUT: Record<Format, Span[]> = {
   R: R_LAYOUT,
   I: [R_LAYOUT[0]!, R_LAYOUT[1]!, R_LAYOUT[2]!, { key: "imm", hi: 15, lo: 0 }],
   J: [R_LAYOUT[0]!, { key: "target", hi: 25, lo: 0 }],
-  Unknown: R_LAYOUT, // no layout of its own: show the R split
+  Unknown: R_LAYOUT,
 };
 
 const FORMAT_NAME: Record<Format, string> = { R: "R-type", I: "I-type", J: "J-type", Unknown: "unknown" };
@@ -50,15 +44,12 @@ const FIELD_LABEL: Record<FieldKey, string> = {
   target: "target",
 };
 
-// andi, ori and lui use the zero-extended immediate; the other I-types sign-extend (Lecture 18).
+// Lecture 18: andi/ori/lui zero-extend the immediate, the rest sign-extend.
 const ZERO_EXT = new Set(["andi", "ori", "lui"]);
 const SHIFTS = new Set(["sll", "srl", "sra"]);
 
-// ---------- Helpers ----------
-
 const hex = (v: number, digits: number) => "0x" + (v >>> 0).toString(16).toUpperCase().padStart(digits, "0");
 const bin = (v: number, bits: number) => (v >>> 0).toString(2).padStart(bits, "0").slice(-bits);
-/** Groups of four from the right: "1111 1111 1111 0001". */
 const nibbles = (s: string) => s.replace(/\B(?=(\d{4})+$)/g, " ");
 const width = (sp: Span) => sp.hi - sp.lo + 1;
 
@@ -88,8 +79,6 @@ function parseWord(text: string): Parsed {
   if (!/^[0-9a-f]{1,8}$/.test(body)) return { ok: false, error: "Hex: 1 to 8 digits." };
   return { ok: true, word: parseInt(body, 16) >>> 0 };
 }
-
-// ---------- Decoded values per field ----------
 
 function fieldBits(d: DecodedWord, span: Span): number {
   return (d.raw >>> span.lo) & ((1 << width(span)) - 1);
@@ -126,9 +115,8 @@ function meaning(core: Core, d: DecodedWord, key: FieldKey): string {
   }
 }
 
-/** The assembly text split into tokens, each tagged with the field it came from. */
 function assemblyTokens(core: Core, d: DecodedWord): { text: string; field?: FieldKey }[] {
-  // When two fields name the same register, the first in this list wins.
+  // If two fields name the same register, the first listed wins.
   const regFields: ("rs" | "rt" | "rd")[] = d.format === "R" ? ["rd", "rs", "rt"] : d.format === "I" ? ["rt", "rs"] : [];
   const regField = new Map<string, FieldKey>();
   for (const key of regFields) {
@@ -150,8 +138,6 @@ function assemblyTokens(core: Core, d: DecodedWord): { text: string; field?: Fie
   return out;
 }
 
-// ---------- Diagram ----------
-
 const W = 1200;
 const H = 680;
 const IR_X = 80;
@@ -166,7 +152,6 @@ const DIS_H = 92;
 const ASM_Y = 594;
 const ASM_H = 64;
 
-/** Vertical wire with an arrowhead at the bottom. */
 function arrow(x: number, y0: number, y1: number, className: string): SVGGElement {
   return s(
     "g",
@@ -176,7 +161,7 @@ function arrow(x: number, y0: number, y1: number, className: string): SVGGElemen
   );
 }
 
-/** Bus-width mark, as on the lecture slides: a slash across the wire with the bit count. */
+// Slash-and-number bus width mark from the lecture figures.
 function busWidth(x: number, y: number, bits: number): SVGGElement {
   return s(
     "g",
@@ -249,7 +234,6 @@ function drawField(core: Core, d: DecodedWord, span: Span): SVGGElement {
     s("line", { x1: gx + 10, y1: FIELD_Y + 42, x2: gx + gw - 10, y2: FIELD_Y + 42, class: "field-rule" }),
     s("text", { x: cx, y: FIELD_Y + 63, class: "field-dec" }, decimalValue(d, span.key)),
     arrow(cx, FIELD_Y + FIELD_H, DIS_Y, "field-wire"),
-    // Meaning sits right of the lower wire so it never crosses it.
     s("text", { x: cx + 10, y: FIELD_Y + FIELD_H + 26, class: "field-meaning" }, meaning(core, d, span.key)),
   );
   return g;
@@ -294,8 +278,6 @@ function draw(core: Core, d: DecodedWord, onFlip: (bit: number) => void): SVGSVG
   );
   return svg;
 }
-
-// ---------- Wiring ----------
 
 async function main(): Promise<void> {
   const stage = document.getElementById("stage")!;

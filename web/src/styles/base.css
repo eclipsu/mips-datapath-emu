@@ -30,7 +30,6 @@ select {
   outline-offset: 2px;
 }
 
-/* Field colours: set --fc on an element, children use it */
 .f-opcode { --fc: var(--f-opcode); }
 .f-rs     { --fc: var(--f-rs); }
 .f-rt     { --fc: var(--f-rt); }
@@ -39,8 +38,6 @@ select {
 .f-funct  { --fc: var(--f-funct); }
 .f-imm,
 .f-target { --fc: var(--f-imm); }
-
-/* ---------- Toolbar ---------- */
 
 .toolbar {
   display: flex;
@@ -109,10 +106,7 @@ select {
   text-decoration: none;
 }
 
-/* ---------- Stage ---------- */
-
 .stage {
-  /* As wide as the window allows while the whole diagram stays on screen. */
   max-width: min(1500px, calc((100vh - 70px) * 1.7 + 32px));
   margin: 0 auto;
   padding: 16px 16px 32px;

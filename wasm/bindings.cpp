@@ -1,6 +1,4 @@
-// JavaScript bindings for the emulator core (Emscripten embind).
-// The web UI calls these; every result is computed here in C++.
-// Built by web/scripts/build-wasm.sh.
+// embind bindings for the web UI. Built by web/scripts/build-wasm.sh.
 
 #include "decode.hpp"
 #include "regfile.hpp"
@@ -12,13 +10,11 @@
 
 namespace {
 
-// Plain copy of mips::Instruction with the enums turned into strings,
-// so JavaScript gets one flat object per decoded word.
 struct DecodedWord {
     std::uint32_t raw = 0;
-    std::string format;     // "R", "I", "J" or "Unknown"
-    int op = 0;             // position in mips::Op (0 = Unknown)
-    std::string mnemonic;   // mips::mnemonic(op)
+    std::string format;
+    int op = 0;  // index into mips::Op
+    std::string mnemonic;
     std::uint32_t opcode = 0;
     std::uint32_t rs = 0;
     std::uint32_t rt = 0;
@@ -28,7 +24,7 @@ struct DecodedWord {
     std::int32_t imm_sext = 0;
     std::uint32_t imm_zext = 0;
     std::uint32_t target = 0;
-    std::string disassembly;  // mips::disassemble(inst)
+    std::string disassembly;
 };
 
 std::string format_name(mips::Format f) {
