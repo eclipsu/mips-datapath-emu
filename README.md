@@ -7,11 +7,47 @@ The core is plain C++17. The same code runs the unit tests and, compiled to WebA
 
 **Live demo:** [mips.shrestharajeev.com.np](http://mips.shrestharajeev.com.np/)
 
+## Datapath
+
+Step a program through the single-cycle datapath (Lecture 19). Every value on the page comes
+from `Cpu::step()` in C++, compiled to WebAssembly: the page only draws the `StepTrace` it returns.
+
+- **Instruction memory** (left): the loaded program with its disassembly. The highlighted row is
+  the next instruction; the dashed row is the one that just ran.
+- **Datapath** (middle): PC, instruction memory, control, registers, ALU, next-PC logic and data
+  memory, joined by named buses. A bus turns black when it carries data, with its value in a
+  yellow tag. Control shows only the signals that are on; blocks the instruction doesn't use fade out.
+- **Registers** (left) and **data memory** (right): the written register or word is highlighted,
+  and every value can be edited before the next step.
+- **Step** (`S`) runs one instruction and plays it phase by phase: Fetch, Decode, Execute,
+  Memory, Write back. **Run** (`R`) keeps stepping until the program ends. Click a phase to
+  see the cycle up to that point.
+- Pick one of the example programs or paste your own hex words under **Edit program**.
+- If the trace disagrees with `decode()` and `control_for()`, or `step()` throws, the page says
+  so above the figure.
+
+### R-type: `add $t2, $t0, $t1`
+
+Reads 5 and 7, the ALU adds them, and 12 is written back to `$t2`. Data memory is not used.
+
+![Datapath running add](docs/screenshots/datapath-add.png)
+
+### Store: `sw $t2, 256($zero)`
+
+The ALU adds the immediate 256 to `$zero` to form the address, and `$t2` goes to data memory as write data.
+
+![Datapath running sw](docs/screenshots/datapath-sw.png)
+
+### Branch: `bne $t0, $zero, -3`
+
+The ALU subtracts, Zero is 0, so the branch is taken and the next PC is `0x8`, the top of the loop.
+
+![Datapath running bne](docs/screenshots/datapath-bne.png)
+
 ## Decoder
 
 Type a 32-bit instruction word or pick an example. The page splits the word into its fields,
-names the registers, disassembles it, and shows the control signals the control unit would raise
-(Lecture 19, slides 24-25).
+names the registers, and disassembles it.
 
 - Click any bit in the instruction register to flip it and see how the decode changes.
 - The URL keeps the current word (`#0x8E080004`), so you can link to a specific instruction.
@@ -32,8 +68,8 @@ names the registers, disassembles it, and shows the control signals the control 
 
 - [x] Core: memory, register file, ALU, decoder, control unit
 - [x] Single-cycle CPU with a per-instruction trace
-- [x] Web UI: decoder and control signals (C++ core compiled to WebAssembly)
-- [ ] Web UI: step through a program on the datapath
+- [x] Web UI: decoder (C++ core compiled to WebAssembly)
+- [x] Web UI: step through a program on the single-cycle datapath
 - [ ] 5-stage pipeline with pipeline registers
 - [ ] Forwarding, load-use stalls, and branch/jump handling in ID
 
@@ -139,13 +175,21 @@ npm install
 npm run dev           # builds the WASM module, then starts Vite on localhost
 ```
 
-`web/scripts/build-wasm.sh` compiles `src/decode.cpp`, `src/control.cpp`, `src/regfile.cpp`
-and `wasm/bindings.cpp` into `web/src/wasm/mipscore.wasm`. The bindings use embind to turn
-`mips::Instruction` and `mips::ControlSignals` into plain JS objects. `web/src/shared/core.ts`
-loads the module and wraps it in a typed `Core` interface.
+Open `/index.html` for the decoder and `/datapath.html` for the datapath.
 
-Every push to `main` or `feature/web-ui` that touches `src/`, `wasm/` or `web/` is built by
-GitHub Actions (`.github/workflows/pages.yml`) and deployed to GitHub Pages.
+`web/scripts/build-wasm.sh` compiles the core (`src/alu.cpp`, `control.cpp`, `cpu.cpp`,
+`decode.cpp`, `memory.cpp`, `regfile.cpp`) and `wasm/bindings.cpp` into
+`web/src/wasm/mipscore.wasm`. `npm run dev` and `npm run build` rerun it, so a change in `src/`
+shows up in the page on the next run.
+
+The bindings use embind to expose:
+
+- `decode(word)` and `registerName(reg)`
+- `control(word)`: `mips::control_for()` for the decoded word
+- `Machine`: a `mips::Cpu` the page can load, read and write (registers, memory, PC) and `step()`.
+  `step()` returns the `StepTrace` as a plain object, with `error` set if the C++ threw.
+
+`web/src/shared/core.ts` loads the module and wraps it in a typed `Core` interface.
 
 ## Layout
 
@@ -162,6 +206,9 @@ tests/          GoogleTest unit tests, one file per unit
 tools/          probe_decode: command-line decoder (make probe)
 wasm/           embind bindings that expose the core to JavaScript
 web/            Vite + TypeScript front end
+  src/pages/probe/      decoder page
+  src/pages/datapath/   datapath page (diagram.ts draws the figure)
+  src/shared/           WASM loader and page navigation
 docs/           screenshots
 ```
 
