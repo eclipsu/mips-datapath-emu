@@ -19,6 +19,7 @@ fi
 mkdir -p "$out"
 
 sources=(
+    "$root/src/control.cpp"
     "$root/src/decode.cpp"
     "$root/src/regfile.cpp"
     "$root/wasm/bindings.cpp"

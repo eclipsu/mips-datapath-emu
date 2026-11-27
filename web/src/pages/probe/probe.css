@@ -163,3 +163,88 @@
   fill: var(--danger);
   font-size: 22px;
 }
+
+.ctrl-in {
+  stroke: var(--fc);
+  stroke-width: 3;
+  fill: none;
+}
+
+.head.ctrl-in {
+  fill: var(--fc);
+  stroke: none;
+}
+
+.ctrl-in-label {
+  fill: var(--fc);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ctrl-block {
+  fill: var(--fill-control);
+}
+
+.ctrl-title {
+  fill: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.ctrl-bus {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.signal .wire {
+  stroke: var(--signal-off);
+  stroke-width: 2;
+}
+
+.signal .head {
+  fill: var(--signal-off);
+}
+
+.signal.on .wire {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.signal.on .head {
+  fill: var(--ink);
+}
+
+.signal-name {
+  fill: var(--ink-soft);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.signal.on .signal-name {
+  fill: var(--ink);
+}
+
+.signal-box {
+  fill: var(--fill-field);
+  stroke: var(--signal-off);
+  stroke-width: 1.5;
+}
+
+.signal.on .signal-box {
+  fill: var(--fill-output);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.signal-value {
+  fill: var(--signal-off);
+  font-family: var(--font-code) !important;
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.signal.on .signal-value {
+  fill: var(--ink);
+}

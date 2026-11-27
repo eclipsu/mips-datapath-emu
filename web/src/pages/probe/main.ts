@@ -1,11 +1,13 @@
 import "../../styles/base.css";
 import "./probe.css";
 
-import { loadCore, type Core, type DecodedWord, type Format } from "../../shared/core";
+import { loadCore, type Control, type Core, type DecodedWord, type Format } from "../../shared/core";
 import { navLinks, showLoadError } from "../../shared/frame";
 
-// Words from tests/test_decode.cpp.
-const EXAMPLES = [0x2237fff1, 0x1520fffa, 0x012a4020, 0x00094100, 0x3108ffff, 0x2108ffff, 0x08000002];
+// From tests/test_decode.cpp, plus lw $t0, 4($s0) and sw $t1, 16($s2) from Lecture 19.
+const EXAMPLES = [
+  0x2237fff1, 0x1520fffa, 0x012a4020, 0x00094100, 0x3108ffff, 0x2108ffff, 0x08000002, 0x8e080004, 0xae490010,
+];
 
 type FieldKey = "opcode" | "rs" | "rt" | "rd" | "shamt" | "funct" | "imm" | "target";
 
@@ -138,19 +140,38 @@ function assemblyTokens(core: Core, d: DecodedWord): { text: string; field?: Fie
   return out;
 }
 
-const W = 1200;
-const H = 680;
+const W = 1560;
+const H = 720;
 const IR_X = 80;
 const IR_W = 1040;
+const IR_CX = IR_X + IR_W / 2;
 const BIT_W = IR_W / 32;
-const IR_Y = 56;
+const IR_Y = 96;
 const IR_H = 56;
-const FIELD_Y = 240;
+const FIELD_Y = 280;
 const FIELD_H = 84;
-const DIS_Y = 430;
+const DIS_Y = 470;
 const DIS_H = 92;
-const ASM_Y = 594;
+const ASM_Y = 634;
 const ASM_H = 64;
+const CTRL_X = 1200;
+const CTRL_W = 320;
+const CTRL_Y = IR_Y;
+const CTRL_H = 72;
+
+// Names and meanings from src/control.hpp (Lecture 19, slides 24-25).
+const SIGNALS: { name: string; key: Exclude<keyof Control, "alu_op">; tip: string }[] = [
+  { name: "RegDst", key: "reg_dst", tip: "1: write rd (R-type). 0: write rt." },
+  { name: "ALUSrc", key: "alu_src", tip: "1: ALU input B is the immediate. 0: it is rt." },
+  { name: "MemtoReg", key: "mem_to_reg", tip: "1: write-back data comes from memory. 0: from the ALU." },
+  { name: "RegWrite", key: "reg_write", tip: "Write the destination register." },
+  { name: "MemRead", key: "mem_read", tip: "Read data memory (lw)." },
+  { name: "MemWrite", key: "mem_write", tip: "Write data memory (sw)." },
+  { name: "Branch", key: "branch", tip: "beq / bne." },
+  { name: "Jump", key: "jump", tip: "j, jal, jr." },
+  { name: "JumpReg", key: "jump_reg", tip: "jr: the target comes from rs." },
+  { name: "Link", key: "link", tip: "jal: save PC+4 in $ra." },
+];
 
 function arrow(x: number, y0: number, y1: number, className: string): SVGGElement {
   return s(
@@ -158,6 +179,15 @@ function arrow(x: number, y0: number, y1: number, className: string): SVGGElemen
     { class: className },
     s("line", { x1: x, y1: y0, x2: x, y2: y1 - 9, class: "wire" }),
     s("path", { d: `M ${x - 6} ${y1 - 11} L ${x + 6} ${y1 - 11} L ${x} ${y1} Z`, class: "head" }),
+  );
+}
+
+function hArrow(x0: number, x1: number, y: number, className: string): SVGGElement {
+  return s(
+    "g",
+    { class: className },
+    s("line", { x1: x0, y1: y, x2: x1 - 9, y2: y, class: "wire" }),
+    s("path", { d: `M ${x1 - 11} ${y - 6} L ${x1 - 11} ${y + 6} L ${x1} ${y} Z`, class: "head" }),
   );
 }
 
@@ -184,8 +214,9 @@ function keyActivate(node: SVGElement, action: () => void): void {
 function drawInstructionRegister(d: DecodedWord, spans: Span[], onFlip: (bit: number) => void): SVGGElement {
   const g = s("g", { class: "ir" });
   g.append(
-    s("text", { x: IR_X, y: IR_Y - 14, class: "block-label" }, "Instruction Register"),
-    s("text", { x: IR_X + IR_W, y: IR_Y - 14, class: "ir-hex", "text-anchor": "end" }, hex(d.raw, 8)),
+    // Starts right of the opcode bits so the wire to Control can leave from the top.
+    s("text", { x: IR_X + 6 * BIT_W + 10, y: IR_Y - 14, class: "block-label" }, "Instruction Register"),
+    s("text", { x: IR_X + 6 * BIT_W + 190, y: IR_Y - 14, class: "ir-hex" }, hex(d.raw, 8)),
     s("rect", { x: IR_X, y: IR_Y, width: IR_W, height: IR_H, class: "block register" }),
   );
 
@@ -227,7 +258,7 @@ function drawField(core: Core, d: DecodedWord, span: Span): SVGGElement {
   const g = s("g", { class: `field f-${span.key}${d.format === "Unknown" ? " off" : ""}` });
   g.append(
     arrow(cx, IR_Y + IR_H + 22, FIELD_Y, "field-wire"),
-    busWidth(cx, 182, bits),
+    busWidth(cx, IR_Y + 126, bits),
     s("text", { x: gx, y: FIELD_Y - 10, class: "field-label" }, FIELD_LABEL[span.key]),
     s("rect", { x: gx, y: FIELD_Y, width: gw, height: FIELD_H, class: "block field-box" }),
     s("text", { x: cx, y: FIELD_Y + 24, class: "field-bin" }, bits >= 16 ? nibbles(binary) : binary),
@@ -250,12 +281,12 @@ function drawDisassembler(core: Core, d: DecodedWord): SVGGElement {
       { x: IR_X + IR_W - 24, y: DIS_Y + DIS_H / 2, class: "unit-info", "text-anchor": "end" },
       `format ${FORMAT_NAME[d.format]}   op ${d.op}`,
     ),
-    arrow(W / 2, DIS_Y + DIS_H, ASM_Y, "out-wire"),
-    s("text", { x: W / 2 - 330, y: ASM_Y - 12, class: "block-label" }, "Assembly"),
-    s("rect", { x: W / 2 - 330, y: ASM_Y, width: 660, height: ASM_H, class: `block output${known ? "" : " bad"}` }),
+    arrow(IR_CX, DIS_Y + DIS_H, ASM_Y, "out-wire"),
+    s("text", { x: IR_CX - 330, y: ASM_Y - 12, class: "block-label" }, "Assembly"),
+    s("rect", { x: IR_CX - 330, y: ASM_Y, width: 660, height: ASM_H, class: `block output${known ? "" : " bad"}` }),
   );
 
-  const line = s("text", { x: W / 2, y: ASM_Y + ASM_H / 2, class: "asm" });
+  const line = s("text", { x: IR_CX, y: ASM_Y + ASM_H / 2, class: "asm" });
   if (known) {
     for (const t of assemblyTokens(core, d)) {
       line.append(t.field ? s("tspan", { class: `tok f-${t.field}` }, t.text) : t.text);
@@ -267,6 +298,57 @@ function drawDisassembler(core: Core, d: DecodedWord): SVGGElement {
   return g;
 }
 
+// opcode (and funct for R-type) leave the top of the instruction register and drop into Control.
+function drawControl(d: DecodedWord, c: Control): SVGGElement {
+  const g = s("g", { class: "control" });
+  const opX = IR_X + 3 * BIT_W;
+  const opIn = CTRL_X + CTRL_W * 0.65;
+  g.append(
+    s("path", { d: `M ${opX} ${IR_Y} V 28 H ${opIn} V ${CTRL_Y - 9}`, class: "wire f-opcode ctrl-in" }),
+    s("path", { d: `M ${opIn - 6} ${CTRL_Y - 11} L ${opIn + 6} ${CTRL_Y - 11} L ${opIn} ${CTRL_Y} Z`, class: "head f-opcode ctrl-in" }),
+    busWidth(opX, 64, 6),
+    s("text", { x: opX + 14, y: 18, class: "ctrl-in-label f-opcode" }, "opcode [31-26]"),
+  );
+  if (d.format === "R") {
+    const fnX = IR_X + 29 * BIT_W;
+    const fnIn = CTRL_X + CTRL_W * 0.35;
+    g.append(
+      s("path", { d: `M ${fnX} ${IR_Y} V 52 H ${fnIn} V ${CTRL_Y - 9}`, class: "wire f-funct ctrl-in" }),
+      s("path", { d: `M ${fnIn - 6} ${CTRL_Y - 11} L ${fnIn + 6} ${CTRL_Y - 11} L ${fnIn} ${CTRL_Y} Z`, class: "head f-funct ctrl-in" }),
+      busWidth(fnX, 76, 6),
+      s("text", { x: fnX + 14, y: 42, class: "ctrl-in-label f-funct" }, "funct [5-0]"),
+    );
+  }
+
+  g.append(
+    s("rect", { x: CTRL_X, y: CTRL_Y, width: CTRL_W, height: CTRL_H, rx: 14, class: "block ctrl-block" }),
+    s("text", { x: CTRL_X + CTRL_W / 2, y: CTRL_Y + CTRL_H / 2, class: "ctrl-title" }, "Control Unit"),
+  );
+
+  const busX = CTRL_X + 28;
+  const rowY = (i: number) => CTRL_Y + CTRL_H + 40 + i * 40;
+  const rows = [...SIGNALS.map((sig) => ({ name: sig.name, tip: sig.tip, on: c[sig.key], value: c[sig.key] ? "1" : "0" })),
+    { name: "ALUOp", tip: "Operation the ALU performs.", on: d.format !== "Unknown", value: c.alu_op }];
+
+  g.append(s("line", { x1: busX, y1: CTRL_Y + CTRL_H, x2: busX, y2: rowY(rows.length - 1), class: "ctrl-bus" }));
+  rows.forEach((row, i) => {
+    const y = rowY(i);
+    const boxW = 72;
+    const boxX = CTRL_X + CTRL_W - boxW;
+    const sig = s(
+      "g",
+      { class: `signal${row.on ? " on" : ""}` },
+      s("title", {}, `${row.name}: ${row.tip}`),
+      hArrow(busX, busX + 64, y, "signal-wire"),
+      s("text", { x: busX + 76, y, class: "signal-name" }, row.name),
+      s("rect", { x: boxX, y: y - 15, width: boxW, height: 30, class: "signal-box" }),
+      s("text", { x: boxX + boxW / 2, y, class: "signal-value" }, row.value),
+    );
+    g.append(sig);
+  });
+  return g;
+}
+
 function draw(core: Core, d: DecodedWord, onFlip: (bit: number) => void): SVGSVGElement {
   const spans = LAYOUT[d.format];
   const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "group" });
@@ -275,6 +357,7 @@ function draw(core: Core, d: DecodedWord, onFlip: (bit: number) => void): SVGSVG
     drawInstructionRegister(d, spans, onFlip),
     ...spans.map((span) => drawField(core, d, span)),
     drawDisassembler(core, d),
+    drawControl(d, core.control(d.raw)),
   );
   return svg;
 }
