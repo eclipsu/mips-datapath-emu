@@ -1,132 +1,255 @@
-/* Decoder diagram. Colours come from tokens.css. */
+/* Decoder page, laid out like Lecture 19, Example 2.9. */
 
-.stage svg text {
-  dominant-baseline: middle;
-  font-family: var(--font-ui);
+.sheet > section + section {
+  margin-top: 32px;
 }
 
-.title {
-  fill: var(--text);
-  font-size: 40px;
-  text-anchor: middle;
+/* ---------- Question box ---------- */
+
+.question {
+  padding: 14px 18px 16px;
+  border: 1px solid var(--rule-soft);
 }
 
-.chip {
-  fill: var(--chip);
-  stroke: var(--chip-edge);
-  stroke-width: 3;
-  rx: 8;
-}
-
-.unit {
-  fill: var(--chip-inner);
-  stroke: #4a1f45;
-  stroke-width: 3;
-}
-
-.unit-title {
-  fill: var(--chip-ink);
-  font-size: 26px;
+.q-text {
+  margin: 0 0 12px;
+  color: var(--step);
+  font-family: var(--font-title);
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 0.04em;
 }
 
-.label {
-  fill: var(--chip-ink);
+.q-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.word {
+  width: 12ch;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: #fff;
+  font-size: 24px;
+}
+
+.word[aria-invalid="true"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.word-hint {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.word-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+/* Lecture-reference boxes, like "CE230_lec07.pdf → slide 11" on the slides */
+.refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref {
+  display: inline-flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 10px;
+  border: 1px solid var(--ref-edge);
+  border-radius: 0;
+  background: var(--ref);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ref code {
+  font-size: 14px;
+}
+
+.ref:hover {
+  border-color: var(--ink-soft);
+}
+
+.ref[aria-pressed="true"] {
+  border-color: var(--ink);
+  outline: 1px solid var(--ink);
+}
+
+/* ---------- Steps ---------- */
+
+.step-text {
+  margin: 0 0 12px;
+  font-family: var(--font-title);
+  font-size: 19px;
+}
+
+.step-lead {
+  text-decoration: underline;
+}
+
+.hl-opcode {
+  color: var(--f-imm);
+  font-weight: 700;
+}
+
+/* ---------- Step 1: bits and braces ---------- */
+
+.bits-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.bits-svg text {
+  dominant-baseline: middle;
+}
+
+.word-label {
+  fill: #d6246e;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.format-label {
+  fill: var(--ink);
+  font-family: var(--font-title);
   font-size: 15px;
   font-weight: 700;
 }
 
-.note {
-  fill: var(--chip-ink);
-  font-size: 14px;
-}
-
-.bitnum {
-  fill: var(--chip-ink);
-  font-family: var(--font-digits) !important;
-  font-size: 12px;
-}
-
-.base-tag {
-  fill: var(--chip-ink);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.base-tag:hover {
-  text-decoration: underline;
-}
-
-/* Value displays */
-
-.display {
-  fill: var(--display);
-  stroke: var(--display-edge);
-  stroke-width: 3;
-}
-
-.display.bad {
-  fill: #c98a80;
-}
-
-.field.off .display {
-  fill: var(--display-off);
-}
-
-.digits {
-  fill: var(--display-ink);
-  font-family: var(--font-digits) !important;
-  font-size: 24px;
-  font-weight: 700;
+.hex-digit {
+  fill: var(--link);
+  font-family: var(--font-title);
+  font-size: 22px;
   text-anchor: middle;
 }
-
-.digits.big {
-  font-size: 30px;
-}
-
-.divider {
-  stroke: var(--display-edge);
-  stroke-width: 2;
-}
-
-/* Instruction-register bits: click to flip */
 
 .bit {
   cursor: pointer;
   outline: none;
 }
 
-.bit .hit {
+.bit-hit {
   fill: transparent;
 }
 
-.bit:not(.one) .digits {
-  fill: #1f5a62;
+.bit:hover .bit-hit,
+.bit:focus-visible .bit-hit {
+  fill: var(--highlight);
+  stroke: var(--ink);
+  stroke-width: 1;
 }
 
-.bit:hover .hit,
-.bit:focus-visible .hit {
-  fill: var(--wire-live);
+.bit-digit {
+  fill: var(--ink);
+  font-family: var(--font-code);
+  font-size: 20px;
+  font-weight: 700;
+  text-anchor: middle;
 }
 
-.bit:hover .digits,
-.bit:focus-visible .digits {
-  fill: var(--display-ink);
+.brace {
+  fill: none;
+  stroke: var(--fc);
+  stroke-width: 2.5;
 }
 
-/* Wires: light up the whole path of the field under the pointer */
+/* ---------- Step 2: field table ---------- */
 
-.wire {
-  stroke: var(--wire);
-  stroke-width: 4;
+.split-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: center;
 }
 
-.field:hover .wire {
-  stroke: var(--wire-live);
+.split-table th,
+.split-table td {
+  padding: 4px 6px;
+  color: var(--fc);
+  overflow-wrap: anywhere;
 }
 
-.field:hover .display {
-  stroke: var(--wire-live);
+.split-table .widths th {
+  padding-bottom: 2px;
+  font-family: var(--font-code);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.split-table .boxed td {
+  height: 44px;
+  border: 1.5px solid var(--rule);
+  font-family: var(--font-code);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.split-table .names td {
+  font-family: var(--font-title);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.split-table .meanings td {
+  font-family: var(--font-code);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.in-decimal {
+  margin: 20px 0 8px;
+  color: #7b3fb5;
+  font-family: var(--font-title);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* ---------- Step 3: assembly ---------- */
+
+#step3 .step-lead {
+  color: #d6246e;
+  text-decoration: none;
+}
+
+.asm {
+  display: inline-block;
+  margin: 0;
+  padding: 8px 18px;
+  background: var(--highlight);
+  font-size: 28px;
+}
+
+.asm .tok {
+  color: var(--fc);
+}
+
+.asm .unknown {
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+@media (max-width: 760px) {
+  .split-table .boxed td {
+    font-size: 14px;
+  }
+
+  .asm {
+    font-size: 20px;
+  }
 }

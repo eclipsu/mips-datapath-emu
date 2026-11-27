@@ -3,22 +3,56 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Decode one 32-bit MIPS instruction word into its fields." />
+    <meta name="description" content="Translate a 32-bit MIPS machine word into assembly, field by field." />
     <title>Decoder · MIPS pipe emu</title>
   </head>
   <body>
-    <header class="toolbar" id="toolbar">
-      <label>
-        Instruction word
-        <input id="word" type="text" spellcheck="false" autocomplete="off" aria-describedby="word-error" />
-      </label>
-      <span class="error" id="word-error" role="alert"></span>
-      <label>
-        Example
-        <select id="examples"></select>
-      </label>
+    <header class="band">
+      <div class="band-inner" id="band">
+        <h1><span class="lead">Decoder:</span> Machine code to Assembly</h1>
+      </div>
     </header>
-    <main class="stage" id="stage"></main>
+
+    <main class="sheet" id="sheet">
+      <section class="question" aria-labelledby="q-text">
+        <p class="q-text" id="q-text">Translate the following machine language code into assembly language.</p>
+        <div class="q-row">
+          <input
+            id="word"
+            class="word code"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="Machine word in hex or binary"
+            aria-describedby="word-error"
+          />
+          <span class="word-hint">hex, or <code>0b…</code> for binary</span>
+          <span class="word-error" id="word-error" role="alert"></span>
+        </div>
+        <ul class="refs" id="examples" aria-label="Examples from the lectures"></ul>
+      </section>
+
+      <section class="step" aria-labelledby="step1">
+        <p class="step-text" id="step1">
+          <strong class="step-lead">First:</strong> represent the word in binary and look at the
+          <span class="hl-opcode">six most significant bits</span> to find the opcode. Click any bit to flip it.
+        </p>
+        <div class="bits" id="bits"></div>
+      </section>
+
+      <section class="step" aria-labelledby="step2">
+        <p class="step-text" id="step2">
+          <strong class="step-lead">Then:</strong> split the bits into the <span id="format-name"></span> fields.
+        </p>
+        <div class="split" id="split"></div>
+      </section>
+
+      <section class="step" aria-labelledby="step3">
+        <p class="step-text" id="step3"><strong class="step-lead">Assembly Code</strong></p>
+        <p class="asm code" id="asm"></p>
+      </section>
+    </main>
+
     <script type="module" src="/src/pages/probe/main.ts"></script>
   </body>
 </html>

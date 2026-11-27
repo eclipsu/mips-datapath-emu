@@ -9,7 +9,7 @@ interface PageLink {
 // Add new pages here and to vite.config.ts.
 const PAGES: PageLink[] = [{ id: "probe", label: "Decoder", href: "./index.html" }];
 
-/** Page links for the toolbar. Hidden while there is only one page. */
+/** Page links for the title band. Hidden while there is only one page. */
 export function navLinks(current: string): HTMLElement | null {
   if (PAGES.length < 2) return null;
   const nav = document.createElement("nav");

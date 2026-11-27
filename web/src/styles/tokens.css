@@ -1,31 +1,35 @@
 /* Design tokens shared by every page.
-   Look: flat hardware diagram on black (pink chip body, teal value displays, dark wires). */
+   Look: the CE230 lecture slides (white page, serif titles, Courier code, colour-coded fields). */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --page: #000;
-  --toolbar: #111;
-  --toolbar-line: #222;
-  --text: #f2f2f2;
-  --text-dim: #9a9a9a;
+  --page: #fff;
+  --ink: #111;
+  --ink-soft: #555;
+  --rule: #222;          /* table and box outlines */
+  --rule-soft: #c9c9c9;
 
-  --chip: #d79bbd;         /* chip body */
-  --chip-edge: #6b2f5c;
-  --chip-inner: #8c6a8a;   /* inner unit inside a chip */
-  --chip-ink: #1d1d1d;     /* labels drawn on the chip */
+  --title: #b0101e;      /* slide title red */
+  --step: #1f7a3a;       /* green question / step text */
+  --band: #e4e1ee;       /* lavender title band */
+  --band-edge: #b9b3cc;
+  --ref: #e6eadf;        /* sage "CE230_lec07.pdf → slide 11" boxes */
+  --ref-edge: #c8cfbd;
+  --highlight: #fbf3c4;  /* yellow behind the assembly line */
+  --link: #1f5fbf;
+  --danger: #c62828;
 
-  --display: #3a99a5;      /* value display */
-  --display-off: #6f7f82;  /* display for a field this format doesn't use */
-  --display-ink: #111;
-  --display-edge: #111;
+  /* Instruction fields (same colour on every page) */
+  --f-opcode: #16a34a;
+  --f-rs: #1d4ed8;
+  --f-rt: #c026d3;
+  --f-rd: #dc2626;
+  --f-shamt: #6b7280;
+  --f-funct: #0d9488;
+  --f-imm: #ea580c;      /* immediate and J-type target */
 
-  --wire: #333;
-  --wire-live: #f5e663;    /* the one highlight colour */
-
-  --button: #1677ff;
-  --danger: #c0392b;
-
-  --font-ui: "Segoe UI", "Open Sans", "Noto Sans", system-ui, sans-serif;
-  --font-digits: ui-monospace, "SFMono-Regular", "DejaVu Sans Mono", Menlo, monospace;
+  --font-title: "Times New Roman", Times, "Liberation Serif", serif;
+  --font-body: Arial, "Liberation Sans", Helvetica, sans-serif;
+  --font-code: "Courier New", Courier, "Liberation Mono", monospace;
 }
