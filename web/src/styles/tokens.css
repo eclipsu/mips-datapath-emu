@@ -1,35 +1,33 @@
 /* Design tokens shared by every page.
-   Look: the CE230 lecture slides (white page, serif titles, Courier code, colour-coded fields). */
+   Look: a printed course handout. Lecture colours, cleaner type and spacing. */
 
 :root {
   color-scheme: light;
 
-  --page: #fff;
-  --ink: #111;
-  --ink-soft: #555;
-  --rule: #222;          /* table and box outlines */
-  --rule-soft: #c9c9c9;
+  --page: #fbfaf7;       /* warm paper */
+  --surface: #fff;
+  --ink: #1a1a1a;
+  --ink-soft: #5c5c5c;
+  --ink-faint: #8f8f8f;
+  --rule: #e4e1da;
+  --rule-strong: #cfcac0;
 
-  --title: #b0101e;      /* slide title red */
-  --step: #1f7a3a;       /* green question / step text */
-  --band: #e4e1ee;       /* lavender title band */
-  --band-edge: #b9b3cc;
-  --ref: #e6eadf;        /* sage "CE230_lec07.pdf → slide 11" boxes */
-  --ref-edge: #c8cfbd;
-  --highlight: #fbf3c4;  /* yellow behind the assembly line */
-  --link: #1f5fbf;
+  --accent: #b0101e;     /* lecture title red: headings, step numbers, focus */
+  --highlight: #fbefb0;  /* highlighter yellow behind the assembly line */
   --danger: #c62828;
 
-  /* Instruction fields (same colour on every page) */
-  --f-opcode: #16a34a;
+  /* Instruction fields: same colour on every page (matches the lecture colour coding) */
+  --f-opcode: #15803d;
   --f-rs: #1d4ed8;
-  --f-rt: #c026d3;
-  --f-rd: #dc2626;
+  --f-rt: #b02ab4;
+  --f-rd: #d03030;
   --f-shamt: #6b7280;
-  --f-funct: #0d9488;
-  --f-imm: #ea580c;      /* immediate and J-type target */
+  --f-funct: #0f8577;
+  --f-imm: #d45708;      /* immediate and J-type target */
 
-  --font-title: "Times New Roman", Times, "Liberation Serif", serif;
-  --font-body: Arial, "Liberation Sans", Helvetica, sans-serif;
-  --font-code: "Courier New", Courier, "Liberation Mono", monospace;
+  --font-title: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  --font-code: "JetBrains Mono", "Courier New", monospace;
+
+  --radius: 6px;
 }

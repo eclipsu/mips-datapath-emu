@@ -7,50 +7,52 @@
     <title>Decoder · MIPS pipe emu</title>
   </head>
   <body>
-    <header class="band">
-      <div class="band-inner" id="band">
-        <h1><span class="lead">Decoder:</span> Machine code to Assembly</h1>
+    <header class="masthead">
+      <div class="masthead-inner" id="masthead">
+        <div class="wordmark">MIPS <span>pipe</span> emu</div>
       </div>
     </header>
 
     <main class="sheet" id="sheet">
-      <section class="question" aria-labelledby="q-text">
-        <p class="q-text" id="q-text">Translate the following machine language code into assembly language.</p>
-        <div class="q-row">
+      <h1 class="page-title">Machine code to assembly</h1>
+      <p class="page-lede">
+        Type a 32-bit word, or pick an example. Click any bit to flip it, and point at a field to follow it
+        through each step.
+      </p>
+
+      <section class="word-entry" aria-label="Instruction word">
+        <div class="word-box">
           <input
             id="word"
             class="word code"
             type="text"
+            maxlength="34"
             spellcheck="false"
             autocomplete="off"
-            aria-label="Machine word in hex or binary"
-            aria-describedby="word-error"
+            aria-label="Instruction word"
+            aria-describedby="word-hint word-error"
           />
-          <span class="word-hint">hex, or <code>0b…</code> for binary</span>
-          <span class="word-error" id="word-error" role="alert"></span>
         </div>
-        <ul class="refs" id="examples" aria-label="Examples from the lectures"></ul>
+        <p class="word-hint" id="word-hint">Hex, or start with <code>0b</code> for binary.</p>
+        <p class="word-error" id="word-error" role="alert"></p>
+        <ul class="examples" id="examples" aria-label="Examples"></ul>
       </section>
 
-      <section class="step" aria-labelledby="step1">
-        <p class="step-text" id="step1">
-          <strong class="step-lead">First:</strong> represent the word in binary and look at the
-          <span class="hl-opcode">six most significant bits</span> to find the opcode. Click any bit to flip it.
-        </p>
-        <div class="bits" id="bits"></div>
-      </section>
-
-      <section class="step" aria-labelledby="step2">
-        <p class="step-text" id="step2">
-          <strong class="step-lead">Then:</strong> split the bits into the <span id="format-name"></span> fields.
-        </p>
-        <div class="split" id="split"></div>
-      </section>
-
-      <section class="step" aria-labelledby="step3">
-        <p class="step-text" id="step3"><strong class="step-lead">Assembly Code</strong></p>
-        <p class="asm code" id="asm"></p>
-      </section>
+      <ol class="steps" id="steps">
+        <li class="step">
+          <h2 class="step-title">Write it in binary</h2>
+          <p class="step-note">The six most significant bits are the opcode. It picks the format.</p>
+          <div class="bits" id="bits"></div>
+        </li>
+        <li class="step">
+          <h2 class="step-title">Split into <span id="format-name"></span> fields</h2>
+          <div class="split" id="split"></div>
+        </li>
+        <li class="step">
+          <h2 class="step-title">Read the assembly</h2>
+          <p class="asm code" id="asm"></p>
+        </li>
+      </ol>
     </main>
 
     <script type="module" src="/src/pages/probe/main.ts"></script>
