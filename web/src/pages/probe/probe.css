@@ -1,158 +1,48 @@
-/* Decoder page. */
+/* Decoder diagram, drawn like the lecture datapath figures. */
 
-/* ---------- Word entry ---------- */
-
-.word-entry {
-  margin-top: 28px;
-}
-
-.word {
-  width: 13ch;
-  padding: 8px 14px;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
-}
-
-.word:focus {
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(176, 16, 30, 0.12);
-}
-
-.word[aria-invalid="true"] {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.word-hint {
-  margin: 6px 0 0;
-  color: var(--ink-faint);
-  font-size: 14px;
-}
-
-.word-error {
-  min-height: 1.5em;
-  margin: 0;
-  color: var(--danger);
-  font-size: 14px;
-}
-
-.examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.example {
-  padding: 5px 12px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink-soft);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.example:hover {
-  border-color: var(--ink-soft);
-  color: var(--ink);
-}
-
-.example[aria-pressed="true"] {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--page);
-}
-
-/* ---------- Steps: numbered, joined by a thin rule ---------- */
-
-.steps {
-  counter-reset: step;
-  margin: 48px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.step {
-  position: relative;
-  padding: 0 0 44px 52px;
-  counter-increment: step;
-}
-
-.step::before {
-  content: counter(step);
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1.5px solid var(--accent);
-  border-radius: 50%;
-  background: var(--page);
-  color: var(--accent);
-  font-family: var(--font-title);
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.step:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  top: 36px;
-  bottom: 6px;
-  left: 15px;
-  width: 1px;
-  background: var(--rule-strong);
-}
-
-.step-title {
-  margin: 0;
-  font-family: var(--font-title);
-  font-size: 23px;
-  font-weight: 600;
-  line-height: 30px;
-}
-
-.step-note {
-  margin: 2px 0 0;
-  color: var(--ink-soft);
-  font-size: 15px;
-}
-
-.bits,
-.split,
-.asm {
-  margin-top: 18px;
-}
-
-/* ---------- Step 1: bits ---------- */
-
-.bits-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.bits-svg text {
+.stage svg text {
   dominant-baseline: middle;
-  text-anchor: middle;
+  font-family: var(--font-label);
 }
 
-.hex-digit {
-  fill: var(--ink-faint);
-  font-family: var(--font-code);
-  font-size: 15px;
+/* Blocks: square corners, black outlines */
+
+.block {
+  stroke: var(--rule);
+  stroke-width: 2.5;
+}
+
+.register { fill: var(--fill-register); }
+.unit     { fill: var(--fill-unit); }
+.output   { fill: var(--fill-output); }
+.output.bad { fill: #fff; }
+
+.block-label {
+  fill: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.unit-title {
+  fill: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.unit-info {
+  fill: var(--ink-soft);
+  font-family: var(--font-code) !important;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: pre;
+}
+
+/* Instruction register */
+
+.ir-hex {
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -161,203 +51,127 @@
   outline: none;
 }
 
-.bit-cell {
-  fill: color-mix(in srgb, var(--fc) 6%, var(--surface));
-  stroke: color-mix(in srgb, var(--fc) 30%, transparent);
-  stroke-width: 1;
+.bit-hit {
+  fill: transparent;
 }
 
-.bit.one .bit-cell {
-  fill: color-mix(in srgb, var(--fc) 16%, var(--surface));
+.bit:hover .bit-hit,
+.bit:focus-visible .bit-hit {
+  fill: var(--fill-output);
+  stroke: var(--ink);
+  stroke-width: 1.5;
 }
 
 .bit-digit {
-  fill: color-mix(in srgb, var(--fc) 45%, var(--ink-faint));
-  font-family: var(--font-code);
-  font-size: 18px;
-  font-weight: 500;
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
+  font-size: 26px;
+  font-weight: 700;
+  text-anchor: middle;
 }
 
-.bit.one .bit-digit {
-  fill: var(--fc);
+.divider {
+  stroke: var(--rule);
+  stroke-width: 2.5;
+}
+
+.bit-num {
+  fill: var(--ink-soft);
+  font-family: var(--font-code) !important;
+  font-size: 12px;
+}
+
+/* Wires */
+
+.field-wire .wire,
+.out-wire .wire {
+  stroke-width: 3;
+}
+
+.field .wire { stroke: var(--fc); }
+.field .head { fill: var(--fc); }
+.out-wire .wire { stroke: var(--ink); }
+.out-wire .head { fill: var(--ink); }
+
+.field:hover .wire {
+  stroke-width: 5;
+}
+
+.bus-width line {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.bus-width text {
+  fill: var(--ink);
+  font-size: 13px;
   font-weight: 700;
 }
 
-.bit:hover .bit-cell,
-.bit:focus-visible .bit-cell {
-  stroke: var(--fc);
-  stroke-width: 2;
+/* Field registers */
+
+.field-box {
+  fill: var(--fill-field);
 }
 
-.brace {
-  fill: none;
+.field:hover .field-box {
   stroke: var(--fc);
-  stroke-width: 2;
-  stroke-linecap: round;
+  stroke-width: 3.5;
 }
 
-.brace-label {
+.field.off .field-box {
+  stroke-dasharray: 6 4;
+}
+
+.field-label {
   fill: var(--fc);
-  font-family: var(--font-title);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-/* ---------- Step 2: field table ---------- */
-
-.split {
-  overflow-x: auto;
-}
-
-.split-table {
-  width: 100%;
-  min-width: 640px;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
-  text-align: center;
-}
-
-.split-table .head-col {
-  width: 12%;
-}
-
-.split-table th,
-.split-table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--rule);
-  overflow-wrap: anywhere;
-}
-
-.split-table tbody tr:last-child > * {
-  border-bottom: 0;
-}
-
-.split-table td + td,
-.split-table td + th,
-.split-table th + td,
-.split-table th + th {
-  border-left: 1px solid var(--rule);
-}
-
-.split-table thead th {
-  border-top: 3px solid var(--fc);
-}
-
-.split-table thead tr > :first-child {
-  border-top: 3px solid transparent;
-}
-
-.col-name {
-  display: block;
-  color: var(--fc);
-  font-family: var(--font-title);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.col-bits {
-  display: block;
-  color: var(--ink-faint);
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.split-table tbody th {
-  color: var(--ink-faint);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-.split-table .binary td {
-  color: var(--fc);
-  font-family: var(--font-code);
   font-size: 17px;
   font-weight: 700;
 }
 
-.split-table .decimal td {
-  font-family: var(--font-code);
-  font-size: 22px;
+.field-bin {
+  fill: var(--fc);
+  font-family: var(--font-code) !important;
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.field-rule {
+  stroke: #d0d0d0;
+  stroke-width: 1;
+}
+
+.field-dec {
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
+  font-size: 28px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.field-meaning {
+  fill: var(--fc);
+  font-family: var(--font-code) !important;
+  font-size: 15px;
   font-weight: 700;
 }
 
-.split-table .means td {
-  color: var(--ink-soft);
-  font-family: var(--font-code);
-  font-size: 14px;
-}
-
-/* ---------- Step 3: assembly ---------- */
+/* Assembly output */
 
 .asm {
-  margin-bottom: 0;
+  fill: var(--ink);
+  font-family: var(--font-code) !important;
   font-size: 32px;
   font-weight: 700;
-}
-
-/* Highlighter stroke behind the line, like the yellow boxes on the slides */
-.asm:not(:has(.unknown)) {
-  display: inline;
-  padding: 0 6px;
-  background: linear-gradient(transparent 55%, var(--highlight) 55%, var(--highlight) 92%, transparent 92%);
-  box-decoration-break: clone;
+  text-anchor: middle;
 }
 
 .asm .tok {
-  color: var(--fc);
+  fill: var(--fc);
 }
 
-.asm .unknown {
-  color: var(--danger);
-  font-family: var(--font-body);
-  font-size: 18px;
-  font-weight: 400;
-}
-
-/* ---------- Follow one field through every step ---------- */
-
-.steps [data-field] {
-  transition: opacity 120ms ease;
-}
-
-.steps[data-hot] [data-field] {
-  opacity: 0.25;
-}
-
-.steps[data-hot="opcode"] [data-field="opcode"],
-.steps[data-hot="rs"] [data-field="rs"],
-.steps[data-hot="rt"] [data-field="rt"],
-.steps[data-hot="rd"] [data-field="rd"],
-.steps[data-hot="shamt"] [data-field="shamt"],
-.steps[data-hot="funct"] [data-field="funct"],
-.steps[data-hot="imm"] [data-field="imm"],
-.steps[data-hot="target"] [data-field="target"] {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .steps [data-field] {
-    transition: none;
-  }
-}
-
-@media (max-width: 700px) {
-  .page-title {
-    font-size: 30px;
-  }
-
-  .step {
-    padding-left: 44px;
-  }
-
-  .asm {
-    font-size: 22px;
-  }
+.output.bad + .asm {
+  fill: var(--danger);
+  font-size: 22px;
 }

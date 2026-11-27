@@ -1,33 +1,34 @@
 /* Design tokens shared by every page.
-   Look: a printed course handout. Lecture colours, cleaner type and spacing. */
+   Look: the datapath figures in the CE230 lectures. White page, black outlines,
+   solid field colours, Arial labels, Courier values. */
 
 :root {
   color-scheme: light;
 
-  --page: #fbfaf7;       /* warm paper */
-  --surface: #fff;
-  --ink: #1a1a1a;
-  --ink-soft: #5c5c5c;
-  --ink-faint: #8f8f8f;
-  --rule: #e4e1da;
-  --rule-strong: #cfcac0;
+  --page: #fff;
+  --ink: #000;
+  --ink-soft: #444;
+  --rule: #000;
+  --bar: #f2f2f2;
+  --bar-edge: #cfcfcf;
 
-  --accent: #b0101e;     /* lecture title red: headings, step numbers, focus */
-  --highlight: #fbefb0;  /* highlighter yellow behind the assembly line */
+  /* Block fills, as in the lecture datapath slides */
+  --fill-register: #fdeedd; /* register file / instruction register */
+  --fill-unit: #e4d9f1;     /* ALU-style unit */
+  --fill-output: #fff3b0;   /* yellow assembly box */
+  --fill-field: #fff;
+
   --danger: #c62828;
 
-  /* Instruction fields: same colour on every page (matches the lecture colour coding) */
+  /* Instruction fields: same colour on every page */
   --f-opcode: #15803d;
   --f-rs: #1d4ed8;
   --f-rt: #b02ab4;
   --f-rd: #d03030;
-  --f-shamt: #6b7280;
+  --f-shamt: #5f6670;
   --f-funct: #0f8577;
-  --f-imm: #d45708;      /* immediate and J-type target */
+  --f-imm: #d45708;         /* immediate and J-type target */
 
-  --font-title: "Source Serif 4", Georgia, "Times New Roman", serif;
-  --font-body: "Source Sans 3", "Segoe UI", Arial, sans-serif;
-  --font-code: "JetBrains Mono", "Courier New", monospace;
-
-  --radius: 6px;
+  --font-label: Arial, "Liberation Sans", Helvetica, sans-serif;
+  --font-code: "Courier New", "Liberation Mono", Courier, monospace;
 }

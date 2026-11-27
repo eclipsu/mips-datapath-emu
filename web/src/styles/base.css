@@ -1,9 +1,3 @@
-@import "@fontsource/source-serif-4/600.css";
-@import "@fontsource/source-serif-4/700.css";
-@import "@fontsource/source-sans-3/400.css";
-@import "@fontsource/source-sans-3/600.css";
-@import "@fontsource/jetbrains-mono/500.css";
-@import "@fontsource/jetbrains-mono/700.css";
 @import "./tokens.css";
 
 *,
@@ -20,27 +14,19 @@ body {
 body {
   background: var(--page);
   color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 17px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-label);
+  font-size: 15px;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
 
-code,
-.code {
-  font-family: var(--font-code);
-  font-weight: 500;
-  font-variant-ligatures: none;
-}
-
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--f-rs);
   outline-offset: 2px;
 }
 
@@ -54,81 +40,93 @@ code,
 .f-imm,
 .f-target { --fc: var(--f-imm); }
 
-/* ---------- Header ---------- */
+/* ---------- Toolbar ---------- */
 
-.masthead {
-  border-bottom: 1px solid var(--rule);
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 28px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--bar-edge);
+  background: var(--bar);
 }
 
-.masthead-inner {
+.toolbar .name {
+  margin-right: auto;
+  font-weight: 700;
+}
+
+.toolbar label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 14px 16px;
+  gap: 8px;
 }
 
-.wordmark {
+.toolbar input,
+.toolbar select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: #fff;
+}
+
+.toolbar input {
+  width: 13ch;
   font-family: var(--font-code);
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
-.wordmark span {
-  color: var(--accent);
+.toolbar select {
+  font-family: var(--font-code);
+  font-weight: 700;
+}
+
+.toolbar input[aria-invalid="true"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.toolbar .error {
+  color: var(--danger);
+  font-size: 13px;
 }
 
 .nav {
   display: flex;
-  gap: 20px;
-  font-size: 15px;
+  gap: 16px;
 }
 
 .nav a {
-  color: var(--ink-soft);
-  text-decoration: none;
-}
-
-.nav a:hover {
-  color: var(--ink);
+  color: var(--f-rs);
 }
 
 .nav a[aria-current="page"] {
   color: var(--ink);
-  font-weight: 600;
-}
-
-/* ---------- Page ---------- */
-
-.sheet {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 16px 72px;
-}
-
-.page-title {
-  margin: 0;
-  font-family: var(--font-title);
-  font-size: 38px;
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  text-decoration: none;
 }
 
-.page-lede {
-  max-width: 60ch;
-  margin: 8px 0 0;
-  color: var(--ink-soft);
+/* ---------- Stage ---------- */
+
+.stage {
+  /* As wide as the window allows while the whole diagram stays on screen. */
+  max-width: min(1500px, calc((100vh - 70px) * 1.7 + 32px));
+  margin: 0 auto;
+  padding: 16px 16px 32px;
+}
+
+.stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .load-error {
   padding: 16px;
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
+  border: 2px solid var(--danger);
   color: var(--danger);
   font-family: var(--font-code);
   white-space: pre-wrap;

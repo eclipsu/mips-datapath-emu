@@ -3,58 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Translate a 32-bit MIPS machine word into assembly, field by field." />
+    <meta name="description" content="Decode a 32-bit MIPS machine word into its fields and assembly." />
     <title>Decoder · MIPS pipe emu</title>
   </head>
   <body>
-    <header class="masthead">
-      <div class="masthead-inner" id="masthead">
-        <div class="wordmark">MIPS <span>pipe</span> emu</div>
-      </div>
+    <header class="toolbar" id="toolbar">
+      <span class="name">MIPS pipe emu · Decoder</span>
+      <label>
+        Instruction word
+        <input id="word" type="text" spellcheck="false" autocomplete="off" aria-describedby="word-error" />
+      </label>
+      <span class="error" id="word-error" role="alert"></span>
+      <label>
+        Example
+        <select id="examples"></select>
+      </label>
     </header>
-
-    <main class="sheet" id="sheet">
-      <h1 class="page-title">Machine code to assembly</h1>
-      <p class="page-lede">
-        Type a 32-bit word, or pick an example. Click any bit to flip it, and point at a field to follow it
-        through each step.
-      </p>
-
-      <section class="word-entry" aria-label="Instruction word">
-        <div class="word-box">
-          <input
-            id="word"
-            class="word code"
-            type="text"
-            maxlength="34"
-            spellcheck="false"
-            autocomplete="off"
-            aria-label="Instruction word"
-            aria-describedby="word-hint word-error"
-          />
-        </div>
-        <p class="word-hint" id="word-hint">Hex, or start with <code>0b</code> for binary.</p>
-        <p class="word-error" id="word-error" role="alert"></p>
-        <ul class="examples" id="examples" aria-label="Examples"></ul>
-      </section>
-
-      <ol class="steps" id="steps">
-        <li class="step">
-          <h2 class="step-title">Write it in binary</h2>
-          <p class="step-note">The six most significant bits are the opcode. It picks the format.</p>
-          <div class="bits" id="bits"></div>
-        </li>
-        <li class="step">
-          <h2 class="step-title">Split into <span id="format-name"></span> fields</h2>
-          <div class="split" id="split"></div>
-        </li>
-        <li class="step">
-          <h2 class="step-title">Read the assembly</h2>
-          <p class="asm code" id="asm"></p>
-        </li>
-      </ol>
-    </main>
-
+    <main class="stage" id="stage"></main>
     <script type="module" src="/src/pages/probe/main.ts"></script>
   </body>
 </html>
