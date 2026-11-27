@@ -16,9 +16,17 @@ names the registers, disassembles it, and shows the control signals the control 
 - Click any bit in the instruction register to flip it and see how the decode changes.
 - The URL keeps the current word (`#0x8E080004`), so you can link to a specific instruction.
 
-| R-type: `add $t0, $t1, $t2` | I-type: `lw $t0, 4($s0)` | J-type: `j 0x8` |
-|---|---|---|
-| ![R-type add](docs/screenshots/r-type-add.png) | ![I-type load word](docs/screenshots/i-type-lw.png) | ![J-type jump](docs/screenshots/j-type-j.png) |
+### R-type: `add $t0, $t1, $t2`
+
+![R-type add](docs/screenshots/r-type-add.png)
+
+### I-type: `lw $t0, 4($s0)`
+
+![I-type load word](docs/screenshots/i-type-lw.png)
+
+### J-type: `j 0x8`
+
+![J-type jump](docs/screenshots/j-type-j.png)
 
 ## Status
 
