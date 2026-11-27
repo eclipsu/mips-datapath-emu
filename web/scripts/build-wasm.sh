@@ -24,12 +24,16 @@ mkdir -p "$out"
 
 # Only the units the bindings use. Add sources here as the bindings grow.
 sources=(
+    "$root/src/alu.cpp"
+    "$root/src/control.cpp"
+    "$root/src/cpu.cpp"
     "$root/src/decode.cpp"
+    "$root/src/memory.cpp"
     "$root/src/regfile.cpp"
     "$root/wasm/bindings.cpp"
 )
 
-em++ -std=c++17 -O2 -Wall -Wextra -Wpedantic \
+em++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -fexceptions \
     -I"$root/src" \
     "${sources[@]}" \
     -lembind \
