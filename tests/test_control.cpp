@@ -1,4 +1,5 @@
 #include "control.hpp"
+#include "test_print.hpp"
 
 #include <gtest/gtest.h>
 
@@ -60,4 +61,33 @@ TEST(Control, JalWritesReturnAddressRegister) {
     EXPECT_TRUE(c.jump);
     EXPECT_TRUE(c.link);
     EXPECT_TRUE(c.reg_write);
+}
+
+// lui puts the immediate in the upper 16 bits: lui $t0, 0x1234 -> $t0 = 0x12340000.
+// The ALU has a dedicated AluOp::Lui for this ((b & 0xFFFF) << 16, a ignored).
+// AluOp::Sll would compute a << b instead, which for lui is rs (0) shifted: always 0.
+TEST(Control, LuiUsesLuiAluOpAndWritesRt) {
+    ControlSignals c = control_for(Op::Lui);
+    EXPECT_EQ(c.alu_op, AluOp::Lui);
+    EXPECT_TRUE(c.alu_src);
+    EXPECT_TRUE(c.reg_write);
+    EXPECT_FALSE(c.reg_dst);
+}
+
+// jr jumps to the address in rs and writes no register.
+TEST(Control, JrJumpsThroughRegisterWithoutWriting) {
+    ControlSignals c = control_for(Op::Jr);
+    EXPECT_TRUE(c.jump);
+    EXPECT_TRUE(c.jump_reg);
+    EXPECT_FALSE(c.reg_write);
+}
+
+// An unknown instruction must not change anything: every signal off.
+TEST(Control, UnknownTurnsEverythingOff) {
+    ControlSignals c = control_for(Op::Unknown);
+    EXPECT_FALSE(c.reg_write);
+    EXPECT_FALSE(c.mem_read);
+    EXPECT_FALSE(c.mem_write);
+    EXPECT_FALSE(c.branch);
+    EXPECT_FALSE(c.jump);
 }

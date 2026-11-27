@@ -34,3 +34,4 @@ Thumbs.db
 
 # Generated WebAssembly module for the web UI (web/scripts/build-wasm.sh)
 web/src/wasm/
+web/.vite/
