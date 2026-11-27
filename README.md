@@ -45,6 +45,72 @@ names the registers, disassembles it, and shows the control signals the control 
 | I | `addi` `slti` `andi` `ori` `lui` `lw` `sw` `beq` `bne` |
 | J | `j` `jal` |
 
+## Bit-level implementation
+
+The ALU and decoder work on the bits directly, the way the hardware does: subtraction and
+comparisons are built from addition, XOR and the sign bit instead of C++'s `-` and `<`,
+and instruction fields come out with shifts and masks.
+
+**Subtraction** is addition of the two's complement (invert, add one):
+
+```cpp
+case AluOp::Sub:
+    value = a + (~b + 1);
+    break;
+```
+
+**Signed less-than** takes the sign bit of `a - b` and corrects it when the subtraction overflows.
+Overflow happens when `a` and `b` have different signs and the result's sign differs from `a`:
+
+```cpp
+case AluOp::Slt: {
+    std::int32_t difference = a + (~b + 1);
+    std::int32_t v = ((a ^ b) & (a ^ difference)) >> 31;
+    value = ((difference >> 31) ^ v) & 1;
+    break;
+}
+```
+
+**Unsigned less-than** computes the borrow out of bit 31:
+
+```cpp
+case AluOp::Sltu: {
+    std::uint32_t difference = a + (~b + 1);
+    value = ((~a & b) | (~(a ^ b) & difference)) >> 31;
+    break;
+}
+```
+
+**Arithmetic shift right** does a logical shift, then fills the vacated top bits with copies of the sign bit:
+
+```cpp
+case AluOp::Sra: {
+    std::uint32_t is_negative = (a >> 31) & 1;
+    std::uint32_t shamt = b & 31;
+    std::uint32_t fill = is_negative ? ~(0xFFFFFFFFu >> shamt) : 0u;
+    value = (a >> shamt) | fill;
+    break;
+}
+```
+
+**Decoding** pulls each field out of the 32-bit word with a shift and a mask, matching the bit
+ranges in the decoder screenshots above:
+
+```cpp
+std::uint8_t opcode = (word >> 26) & 0x3F;   // bits 31-26
+std::uint8_t rs     = (word >> 21) & 0x1F;   // bits 25-21
+std::uint8_t rt     = (word >> 16) & 0x1F;   // bits 20-16
+std::uint8_t rd     = (word >> 11) & 0x1F;   // bits 15-11
+std::uint8_t shamt  = (word >> 6) & 0x1F;    // bits 10-6
+std::uint8_t funct  = word & 0x3F;           // bits 5-0
+
+std::uint32_t imm_zext = word & 0xFFFF;
+std::int32_t  imm_sext = static_cast<std::int16_t>(imm_zext);
+std::uint32_t target   = word & 0x03FFFFFF;
+```
+
+Full source: [`src/alu.cpp`](src/alu.cpp), [`src/decode.cpp`](src/decode.cpp).
+
 ## Build and test
 
 Requires a C++17 compiler, CMake 3.16 or newer, and GoogleTest.
