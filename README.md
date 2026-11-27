@@ -191,6 +191,9 @@ The bindings use embind to expose:
 
 `web/src/shared/core.ts` loads the module and wraps it in a typed `Core` interface.
 
+Every push to `main` or `feature/web-ui` that touches `src/`, `wasm/` or `web/` is built by
+GitHub Actions (`.github/workflows/pages.yml`) and deployed to GitHub Pages.
+
 ## Layout
 
 ```
