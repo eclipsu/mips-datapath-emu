@@ -125,3 +125,13 @@ TEST(Cpu, UnsupportedInstructionThrows) {
     cpu.load_program(0, {enc_i(63, 0, 0, 0)});
     EXPECT_THROW(cpu.step(), std::runtime_error);
 }
+
+// load_program puts words[i] at base + 4*i (each instruction is 4 bytes).
+// With base 0x40: words[0] -> 0x40, words[1] -> 0x44. Address 0 must stay untouched.
+TEST(Cpu, LoadProgramStartsAtBase) {
+    Cpu cpu(1024);
+    cpu.load_program(0x40, {0x11111111u, 0x22222222u});
+    EXPECT_EQ(cpu.memory().read32(0x40), 0x11111111u);
+    EXPECT_EQ(cpu.memory().read32(0x44), 0x22222222u);
+    EXPECT_EQ(cpu.memory().read32(0x00), 0u) << "nothing should be written at address 0";
+}
