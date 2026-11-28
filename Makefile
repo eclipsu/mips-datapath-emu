@@ -1,5 +1,5 @@
 # Convenience wrapper around CMake.
-#   make regfile   build and run only the register-file tests (same for memory, alu, decode, control, cpu)
+#   make regfile   build and run only the register-file tests (same for memory, alu, multiplier, decode, control, cpu)
 #   make test      build everything and run the full suite
 #   make probe     print what decode() returns for WORD=0x... (default 0x2237FFF1)
 #   make clean     delete the build directory
@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 
 BUILD := build
-UNITS := regfile memory alu decode control cpu
+UNITS := regfile memory alu multiplier decode control cpu
 
 .PHONY: all test clean configure probe $(UNITS)
 

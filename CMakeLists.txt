@@ -11,6 +11,7 @@ add_library(mipscore
     src/memory.cpp
     src/regfile.cpp
     src/alu.cpp
+    src/multiplier.cpp
     src/decode.cpp
     src/control.cpp
     src/cpu.cpp
@@ -42,6 +43,7 @@ if(MIPS_BUILD_TESTS)
     mips_unit_test(regfile src/regfile.cpp)
     mips_unit_test(memory  src/memory.cpp)
     mips_unit_test(alu     src/alu.cpp)
+    mips_unit_test(multiplier src/multiplier.cpp)
     mips_unit_test(decode  src/decode.cpp src/regfile.cpp)   # disassemble() uses RegisterFile::name
     mips_unit_test(control src/control.cpp)
     mips_unit_test(cpu     src/memory.cpp src/regfile.cpp src/alu.cpp
