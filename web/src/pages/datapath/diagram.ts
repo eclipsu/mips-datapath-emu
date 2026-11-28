@@ -115,138 +115,112 @@ interface Bus {
 }
 
 const BUSES: Bus[] = [
-  // Fetch
-  {
-    id: "pc-im",
-    name: "PC → instruction memory",
-    pts: [[125, 460], [125, 372]],
-    phase: 0,
-    on: () => true,
-  },
+  // Fetch: PC -> instruction memory -> control, registers, extender
+  { id: "pc-im", name: "PC → instruction memory", pts: [[130, 340], [165, 340]], phase: 0, on: () => true },
   {
     id: "im-ctl",
     name: "Instruction",
-    pts: [[212, 230], [290, 230]],
+    pts: [[345, 300], [362, 300], [362, 100], [390, 100]],
+    dots: [[362, 300]],
     phase: 0,
     on: (u) => u.known,
   },
+  { id: "im-regs", name: "Register numbers", pts: [[345, 300], [390, 300]], phase: 0, on: (u) => u.known },
   {
-    id: "im-regs",
-    name: "Register numbers",
-    pts: [[240, 230], [240, 400], [290, 400]],
-    dots: [[240, 230]],
+    id: "im-imm",
+    name: "Immediate field",
+    pts: [[362, 300], [362, 540], [395, 540]],
     phase: 0,
-    on: (u) => u.readsRs || u.readsRt || u.known,
+    on: (u) => u.aluBImm,
   },
 
   // Decode
-  {
-    id: "rs",
-    name: "Register value A",
-    pts: [[570, 370], [680, 370]],
-    phase: 1,
-    on: (u) => u.aluA,
-  },
-  {
-    id: "rt",
-    name: "Register value B (rt)",
-    pts: [[570, 440], [605, 440], [605, 460], [640, 460]],
-    phase: 1,
-    on: (u) => u.aluBReg,
-  },
+  { id: "rs", name: "Register value A", pts: [[650, 300], [750, 300]], phase: 1, on: (u) => u.aluA },
+  { id: "rt", name: "Register value B (rt)", pts: [[650, 415], [700, 415]], phase: 1, on: (u) => u.aluBReg },
   {
     id: "imm",
     name: "Immediate",
-    pts: [[570, 240], [625, 240], [625, 490], [640, 490]],
+    pts: [[485, 540], [685, 540], [685, 465], [700, 465]],
     phase: 1,
     on: (u) => u.aluBImm,
-    label: { at: [633, 228], anchor: "start" },
-    tag: { at: [625, 318], value: (v) => (SHIFTS.has(v.d.mnemonic) ? String(v.d.shamt) : dec(immValue(v))) },
+    label: { at: [560, 572] },
+    tag: { at: [560, 540], value: (v) => (SHIFTS.has(v.d.mnemonic) ? String(v.d.shamt) : dec(immValue(v))) },
   },
   {
     id: "ctl-next",
     name: "Offset / target",
-    pts: [[570, 150], [680, 150]],
+    pts: [[650, 100], [750, 100]],
     phase: 1,
     on: (u) => u.nextFromCtl,
-    label: { at: [625, 136] },
+    label: { at: [700, 84] },
   },
 
   // Execute
-  {
-    id: "mux-alu",
-    name: "ALU input B",
-    pts: [[658, 475], [680, 475]],
-    phase: 2,
-    on: (u) => u.aluUsed,
-  },
+  { id: "mux-alu", name: "ALU input B", pts: [[722, 440], [750, 440]], phase: 2, on: (u) => u.aluUsed },
   {
     id: "alu-out",
     name: "ALU result",
-    pts: [[830, 420], [1010, 420]],
+    pts: [[890, 365], [1000, 365]],
     phase: 2,
     on: (u) => u.mem || u.wbAlu,
-    label: { at: [896, 442] },
-    tag: { at: [884, 420], value: (v, u) => (v.t ? (u.mem ? addr(v.t.alu_result) : dec(v.t.alu_result)) : null) },
+    label: { at: [935, 390] },
+    tag: { at: [925, 365], value: (v, u) => (v.t ? (u.mem ? addr(v.t.alu_result) : dec(v.t.alu_result)) : null) },
   },
   {
     id: "zero",
     name: "Zero",
-    pts: [[755, 335], [755, 212]],
+    pts: [[820, 268], [820, 160]],
     phase: 2,
     on: (_u, v) => v.c.branch,
-    label: { at: [767, 290], anchor: "start" },
-    tag: { at: [755, 250], value: (v) => (v.t ? (v.t.alu_zero ? "1" : "0") : null) },
+    label: { at: [834, 240], anchor: "start" },
+    tag: { at: [820, 205], value: (v) => (v.t ? (v.t.alu_zero ? "1" : "0") : null) },
   },
 
   // Memory
   {
     id: "wdata",
     name: "Write data",
-    pts: [[590, 440], [590, 560], [985, 560], [985, 470], [1010, 470]],
-    dots: [[590, 440]],
+    pts: [[665, 415], [665, 590], [980, 590], [980, 440], [1000, 440]],
+    dots: [[665, 415]],
     phase: 3,
     on: (_u, v) => v.c.mem_write,
-    label: { at: [780, 546] },
-    tag: { at: [880, 560], value: (v) => dec(v.t ? v.t.rt_value : v.rtValue) },
+    label: { at: [760, 576] },
+    tag: { at: [830, 590], value: (v) => dec(v.t ? v.t.rt_value : v.rtValue) },
   },
 
-  // Write back
-  {
-    id: "mem-wb",
-    name: "Read data",
-    pts: [[1090, 502], [1090, 600], [950, 600]],
-    arrow: false,
-    phase: 4,
-    on: (u) => u.wbMem,
-  },
+  // Write back: ALU result or read data -> mux -> register file
   {
     id: "alu-wb",
     name: "ALU result → write back",
-    pts: [[950, 420], [950, 600]],
-    arrow: false,
-    dots: [[950, 420]],
+    pts: [[970, 365], [970, 275], [1155, 275], [1155, 350], [1170, 350]],
+    dots: [[970, 365]],
     phase: 4,
     on: (u) => u.wbAlu,
   },
   {
+    id: "mem-wb",
+    name: "Read data",
+    pts: [[1140, 420], [1170, 420]],
+    phase: 4,
+    on: (u) => u.wbMem,
+  },
+  {
     id: "wb",
     name: "Write back",
-    pts: [[950, 600], [430, 600], [430, 532]],
-    dots: [[950, 600]],
+    pts: [[1192, 385], [1222, 385], [1222, 615], [600, 615], [600, 475]],
     phase: 4,
     on: (_u, v) => v.c.reg_write,
-    label: { at: [560, 586] },
-    tag: { at: [700, 600], value: (v) => (v.t && v.t.reg_written ? dec(v.t.reg_value) : null) },
+    label: { at: [900, 631] },
+    tag: { at: [900, 615], value: (v) => (v.t && v.t.reg_written ? dec(v.t.reg_value) : null) },
   },
   {
     id: "next-pc",
     name: "Next PC",
-    pts: [[912, 155], [940, 155], [940, 36], [24, 36], [24, 505], [50, 505]],
+    pts: [[1030, 100], [1060, 100], [1060, 16], [12, 16], [12, 340], [30, 340]],
     phase: 4,
     on: () => true,
-    label: { at: [300, 22] },
-    tag: { at: [480, 36], value: (v) => (v.t ? addr(v.t.next_pc) : null) },
+    label: { at: [250, 32] },
+    tag: { at: [520, 16], value: (v) => (v.t ? addr(v.t.next_pc) : null) },
   },
 ];
 
@@ -265,8 +239,8 @@ const SIGNALS: [keyof Control, string][] = [
 
 // ---------- Drawing ----------
 
-export const VIEW_W = 1200;
-export const VIEW_H = 630;
+export const VIEW_W = 1240;
+export const VIEW_H = 640;
 
 export interface Diagram {
   svg: SVGSVGElement;
@@ -296,12 +270,6 @@ function busNode(b: Bus): SVGGElement {
 export function createDiagram(): Diagram {
   const svg = s("svg", { viewBox: `0 0 ${VIEW_W} ${VIEW_H}`, class: "datapath", role: "group" });
 
-  // CPU outline
-  svg.append(
-    s("rect", { x: 250, y: 66, width: 722, height: 512, class: "cpu-frame" }),
-    text(268, 90, "CPU", "cpu-label", "start"),
-  );
-
   const buses = s("g", { class: "buses" });
   for (const b of BUSES) buses.append(busNode(b));
   svg.append(buses);
@@ -312,89 +280,105 @@ export function createDiagram(): Diagram {
     units.append(g);
     return g;
   };
+  const mux = (id: string, x: number, y: number, h: number, ins: [number, string][]) =>
+    unit(
+      id,
+      s("rect", { x, y, width: 22, height: h, rx: 11, class: "box k-mux" }),
+      ...ins.map(([iy, n]) => text(x + 11, iy, n, "mux-in")),
+    );
 
   // PC
   unit(
     "u-pc",
-    s("rect", { x: 50, y: 460, width: 150, height: 90, class: "box k-reg" }),
-    text(125, 484, "PC", "u-title"),
-    s("text", { x: 125, y: 522, class: "u-big", "text-anchor": "middle", "data-v": "pc" }),
+    s("rect", { x: 30, y: 300, width: 100, height: 80, class: "box k-reg" }),
+    text(80, 320, "PC", "u-title"),
+    s("text", { x: 80, y: 354, class: "u-big", "text-anchor": "middle", "data-v": "pc" }),
   );
 
   // Instruction memory
   unit(
     "u-im",
-    s("rect", { x: 40, y: 200, width: 172, height: 172, class: "box k-mem" }),
-    text(126, 224, "Instruction memory", "u-title"),
-    s("text", { x: 126, y: 290, class: "u-mid", "text-anchor": "middle", "data-v": "word" }),
-    s("text", { x: 126, y: 326, class: "u-small", "text-anchor": "middle", "data-v": "asm" }),
+    s("rect", { x: 165, y: 230, width: 180, height: 200, class: "box k-mem" }),
+    text(255, 254, "Instruction memory", "u-title"),
+    s("text", { x: 255, y: 330, class: "u-mid", "text-anchor": "middle", "data-v": "word" }),
+    s("text", { x: 255, y: 366, class: "u-small", "text-anchor": "middle", "data-v": "asm" }),
   );
 
   // Control
   unit(
     "u-ctl",
-    s("rect", { x: 290, y: 100, width: 280, height: 170, class: "box k-ctl" }),
-    text(306, 124, "Control", "u-title", "start"),
-    s("text", { x: 430, y: 168, class: "u-asm", "text-anchor": "middle", "data-v": "ctl-asm" }),
+    s("rect", { x: 390, y: 40, width: 260, height: 160, class: "box k-ctl" }),
+    text(406, 62, "Control", "u-title", "start"),
+    s("text", { x: 520, y: 100, class: "u-asm", "text-anchor": "middle", "data-v": "ctl-asm" }),
     s("g", { class: "chips", "data-v": "chips" }),
   );
 
   // Registers
   const regs = unit(
     "u-regs",
-    s("rect", { x: 290, y: 330, width: 280, height: 202, class: "box k-reg" }),
-    text(306, 354, "Registers", "u-title", "start"),
+    s("rect", { x: 390, y: 240, width: 260, height: 235, class: "box k-reg" }),
+    text(406, 262, "Registers", "u-title", "start"),
   );
   ([
-    ["rs", 392, "read"],
-    ["rt", 440, "read"],
-    ["wr", 498, "write"],
+    ["rs", 300, "read"],
+    ["rt", 415, "read"],
+    ["wr", 456, "write"],
   ] as const).forEach(([key, y, role]) => {
     regs.append(
       s(
         "g",
         { class: "reg-row", "data-row": key },
-        text(306, y, role, "r-role", "start"),
-        s("text", { x: 362, y, class: "r-name", "text-anchor": "start" }),
-        s("text", { x: 554, y, class: "r-val", "text-anchor": "end" }),
+        text(406, y, role, "r-role", "start"),
+        s("text", { x: 466, y, class: "r-name", "text-anchor": "start" }),
+        s("text", { x: 634, y, class: "r-val", "text-anchor": "end" }),
       ),
     );
   });
-  regs.append(s("line", { x1: 300, y1: 468, x2: 560, y2: 468, class: "r-rule" }));
+  regs.append(s("line", { x1: 400, y1: 436, x2: 640, y2: 436, class: "r-rule" }));
 
-  // ALU B select
-  unit("u-mux", s("rect", { x: 640, y: 446, width: 18, height: 58, rx: 9, class: "box k-mux" }));
+  // Immediate extender
+  unit(
+    "u-ext",
+    s("ellipse", { cx: 440, cy: 540, rx: 45, ry: 24, class: "box k-ctl" }),
+    text(440, 541, "Extend", "u-title"),
+  );
+
+  // ALU input B select: register or immediate
+  mux("u-mux", 700, 390, 100, [[415, "0"], [465, "1"]]);
 
   // ALU
   unit(
     "u-alu",
     s("path", {
-      d: "M 680 305 L 830 365 L 830 475 L 680 535 L 680 445 L 712 420 L 680 395 Z",
+      d: "M 750 240 L 890 300 L 890 430 L 750 490 L 750 395 L 775 365 L 750 335 Z",
       class: "box k-alu",
     }),
-    text(772, 372, "ALU", "u-title"),
-    s("text", { x: 772, y: 412, class: "u-asm", "text-anchor": "middle", "data-v": "alu-op" }),
-    s("text", { x: 772, y: 448, class: "u-small", "text-anchor": "middle", "data-v": "alu-in" }),
+    text(830, 326, "ALU", "u-title"),
+    s("text", { x: 830, y: 366, class: "u-asm", "text-anchor": "middle", "data-v": "alu-op" }),
+    s("text", { x: 830, y: 402, class: "u-small", "text-anchor": "middle", "data-v": "alu-in" }),
   );
 
   // Next PC
   unit(
     "u-next",
-    s("rect", { x: 680, y: 100, width: 232, height: 112, class: "box k-ctl" }),
-    text(696, 124, "Next PC", "u-title", "start"),
-    s("text", { x: 796, y: 164, class: "u-big", "text-anchor": "middle", "data-v": "next" }),
-    s("text", { x: 796, y: 194, class: "u-small", "text-anchor": "middle", "data-v": "next-why" }),
+    s("rect", { x: 750, y: 40, width: 280, height: 120, class: "box k-ctl" }),
+    text(766, 62, "Next PC", "u-title", "start"),
+    s("text", { x: 890, y: 100, class: "u-big", "text-anchor": "middle", "data-v": "next" }),
+    s("text", { x: 890, y: 136, class: "u-small", "text-anchor": "middle", "data-v": "next-why" }),
   );
 
   // Data memory
   unit(
     "u-dm",
-    s("rect", { x: 1010, y: 300, width: 160, height: 202, class: "box k-mem" }),
-    text(1090, 324, "Data memory", "u-title"),
-    s("text", { x: 1090, y: 372, class: "u-small", "text-anchor": "middle", "data-v": "dm-op" }),
-    s("text", { x: 1090, y: 404, class: "u-mid", "text-anchor": "middle", "data-v": "dm-addr" }),
-    s("text", { x: 1090, y: 452, class: "u-big", "text-anchor": "middle", "data-v": "dm-val" }),
+    s("rect", { x: 1000, y: 300, width: 140, height: 180, class: "box k-mem" }),
+    text(1070, 324, "Data memory", "u-title"),
+    s("text", { x: 1070, y: 366, class: "u-small", "text-anchor": "middle", "data-v": "dm-op" }),
+    s("text", { x: 1070, y: 400, class: "u-mid", "text-anchor": "middle", "data-v": "dm-addr" }),
+    s("text", { x: 1070, y: 444, class: "u-big", "text-anchor": "middle", "data-v": "dm-val" }),
   );
+
+  // Write-back select: ALU result or read data
+  mux("u-wbmux", 1170, 330, 110, [[350, "0"], [420, "1"]]);
 
   svg.append(units);
 
@@ -440,6 +424,8 @@ export function createDiagram(): Diagram {
     svg.querySelector("#u-alu")!.classList.toggle("idle", !u.aluUsed || upTo < 2);
     svg.querySelector("#u-mux")!.classList.toggle("idle", !u.aluUsed || upTo < 2);
     svg.querySelector("#u-dm")!.classList.toggle("idle", !u.mem || upTo < 3);
+    svg.querySelector("#u-ext")!.classList.toggle("idle", !u.aluBImm || upTo < 1);
+    svg.querySelector("#u-wbmux")!.classList.toggle("idle", !(u.wbAlu || u.wbMem) || upTo < 4);
     svg.querySelector("#u-ctl")!.classList.toggle("idle", !decoded);
     svg.querySelector("#u-regs")!.classList.toggle("idle", !decoded);
 
@@ -452,14 +438,14 @@ export function createDiagram(): Diagram {
     const chips = field("chips");
     chips.replaceChildren();
     if (decoded && u.known) {
-      let x = 306;
-      let y = 214;
+      let x = 406;
+      let y = 146;
       const on = SIGNALS.filter(([k]) => v.c[k] === true).map(([, n]) => n);
       if (u.aluUsed) on.push(`ALU ${v.c.alu_op}`);
       for (const name of on) {
-        const w = name.length * 7 + 18;
-        if (x + w > 556) {
-          x = 306;
+        const w = name.length * 8 + 18;
+        if (x + w > 634) {
+          x = 406;
           y += 28;
         }
         chips.append(

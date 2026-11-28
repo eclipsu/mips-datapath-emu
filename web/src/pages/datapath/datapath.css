@@ -85,6 +85,11 @@ body:has(> .dp) {
   overflow: auto;
 }
 
+/* Fill the center panel: scale the figure to whichever of width or height runs out first. */
+.dp-figure .dp-scroll svg {
+  height: 100%;
+}
+
 /* Registers in the narrow left column: two columns of sixteen */
 .dp-left .regs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -463,6 +468,13 @@ body:has(> .dp) {
 .box.k-alu { fill: var(--fill-unit); }
 .box.k-mux { fill: #fff; }
 
+.mux-in {
+  fill: var(--ink-soft);
+  font-family: var(--font-code) !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .unit {
   transition: opacity 0.25s;
 }
@@ -473,7 +485,7 @@ body:has(> .dp) {
 
 .u-title {
   fill: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
 }
 
@@ -487,14 +499,14 @@ body:has(> .dp) {
 .u-mid {
   fill: var(--ink);
   font-family: var(--font-code) !important;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
 }
 
 .u-small {
   fill: var(--ink-soft);
   font-family: var(--font-code) !important;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -515,7 +527,7 @@ body:has(> .dp) {
 
 .chip-text {
   fill: var(--ink);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -523,7 +535,7 @@ body:has(> .dp) {
 
 .r-role {
   fill: var(--ink-soft);
-  font-size: 12px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -587,7 +599,7 @@ body:has(> .dp) {
 
 .b-label {
   fill: #b5b5b5;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
 }
 
